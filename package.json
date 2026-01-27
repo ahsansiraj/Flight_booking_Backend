@@ -1,0 +1,19 @@
+{
+  "name": "flight_booking_backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "http-status-code": "^2.1.0",
+    "nodemon": "^3.1.11"
+  }
+}
