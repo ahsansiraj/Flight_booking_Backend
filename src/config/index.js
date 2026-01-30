@@ -1,7 +1,7 @@
- const dotenv=require('dotenv')
+const { loggers } = require('winston');
 
- dotenv.config();
 
- module.exports={
-    PORT : process.env.PORT
- }
+module.exports={
+   serverConfig:require('./server-config'),
+   loggersConfig: require('./logger-config')
+}
