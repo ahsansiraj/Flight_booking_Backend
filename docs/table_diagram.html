@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Booking Platform - Database Schema</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .legend {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .legend h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        .legend-line {
+            width: 30px;
+            height: 2px;
+        }
+
+        .diagram-container {
+            background: #f8fafc;
+            padding: 40px;
+            border-radius: 10px;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .table-box {
+            fill: white;
+            stroke: #4a5568;
+            stroke-width: 2;
+            rx: 8;
+        }
+
+        .table-header {
+            fill: #4299e1;
+        }
+
+        .table-title {
+            fill: white;
+            font-weight: bold;
+            font-size: 14px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .table-field {
+            fill: #2d3748;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .pk {
+            fill: #e53e3e;
+            font-weight: bold;
+        }
+
+        .fk {
+            fill: #38a169;
+        }
+
+        .relation-line {
+            stroke: #a0aec0;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .relation-line-strong {
+            stroke: #4299e1;
+            stroke-width: 2.5;
+            fill: none;
+        }
+
+        .arrow {
+            fill: #4299e1;
+        }
+
+        .schema-label {
+            fill: #805ad5;
+            font-weight: bold;
+            font-size: 16px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .cardinality {
+            fill: #e53e3e;
+            font-size: 12px;
+            font-weight: bold;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .info-box {
+            margin-top: 30px;
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .info-box h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4299e1;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛫 Flight Booking Platform</h1>
+        <p class="subtitle">Complete Database Schema & Relationships</p>
+
+        <div class="legend">
+            <h3>Legend</h3>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-line" style="background: #e53e3e;"></div>
+                    <span><strong>PK</strong> - Primary Key</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background: #38a169;"></div>
+                    <span><strong>FK</strong> - Foreign Key</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background: #4299e1;"></div>
+                    <span>— Strong Relationship</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background: #a0aec0;"></div>
+                    <span>— Weak Relationship</span>
+                </div>
+                <div class="legend-item">
+                    <span><strong>1:N</strong> - One to Many</span>
+                </div>
+                <div class="legend-item">
+                    <span><strong>N:M</strong> - Many to Many</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="diagram-container">
+            <svg width="2400" height="3000" xmlns="http://www.w3.org/2000/svg">
+                <!-- Define arrow markers -->
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" class="arrow" />
+                    </marker>
+                    <marker id="circle-end" markerWidth="8" markerHeight="8" refX="4" refY="4">
+                        <circle cx="4" cy="4" r="3" fill="white" stroke="#4299e1" stroke-width="2"/>
+                    </marker>
+                </defs>
+
+                <!-- Schema Labels -->
+                <text x="50" y="30" class="schema-label">CORE SCHEMA (dbo)</text>
+                <text x="1500" y="30" class="schema-label">SECURITY (sec)</text>
+                <text x="50" y="1500" class="schema-label">FINANCIAL</text>
+                <text x="1500" y="1500" class="schema-label">AUDIT</text>
+                <text x="50" y="2300" class="schema-label">ANALYTICS</text>
+
+                <!-- TENANTS Table -->
+                <g id="tenants">
+                    <rect x="50" y="60" width="280" height="240" class="table-box"/>
+                    <rect x="50" y="60" width="280" height="35" class="table-header"/>
+                    <text x="160" y="82" class="table-title">TENANTS</text>
+                    
+                    <text x="60" y="110" class="table-field pk">PK tenant_id</text>
+                    <text x="60" y="130" class="table-field">   tenant_uuid</text>
+                    <text x="60" y="150" class="table-field">   tenant_name</text>
+                    <text x="60" y="170" class="table-field">   tenant_code</text>
+                    <text x="60" y="190" class="table-field">   email</text>
+                    <text x="60" y="210" class="table-field">   status</text>
+                    <text x="60" y="230" class="table-field">   subscription_plan</text>
+                    <text x="60" y="250" class="table-field">   commission_model</text>
+                    <text x="60" y="270" class="table-field">   created_at</text>
+                </g>
+
+                <!-- USERS Table -->
+                <g id="users">
+                    <rect x="450" y="60" width="280" height="280" class="table-box"/>
+                    <rect x="450" y="60" width="280" height="35" class="table-header"/>
+                    <text x="560" y="82" class="table-title">USERS</text>
+                    
+                    <text x="460" y="110" class="table-field pk">PK user_id</text>
+                    <text x="460" y="130" class="table-field">   user_uuid</text>
+                    <text x="460" y="150" class="table-field fk">FK tenant_id</text>
+                    <text x="460" y="170" class="table-field">   username</text>
+                    <text x="460" y="190" class="table-field">   email</text>
+                    <text x="460" y="210" class="table-field">   password_hash</text>
+                    <text x="460" y="230" class="table-field">   first_name</text>
+                    <text x="460" y="250" class="table-field">   last_name</text>
+                    <text x="460" y="270" class="table-field">   user_type</text>
+                    <text x="460" y="290" class="table-field">   status</text>
+                    <text x="460" y="310" class="table-field">   last_login_at</text>
+                    <text x="460" y="330" class="table-field">   created_at</text>
+                </g>
+
+                <!-- CUSTOMERS Table -->
+                <g id="customers">
+                    <rect x="50" y="380" width="280" height="300" class="table-box"/>
+                    <rect x="50" y="380" width="280" height="35" class="table-header"/>
+                    <text x="150" y="402" class="table-title">CUSTOMERS</text>
+                    
+                    <text x="60" y="430" class="table-field pk">PK customer_id</text>
+                    <text x="60" y="450" class="table-field">   customer_uuid</text>
+                    <text x="60" y="470" class="table-field fk">FK tenant_id</text>
+                    <text x="60" y="490" class="table-field fk">FK referred_by_user_id</text>
+                    <text x="60" y="510" class="table-field">   email</text>
+                    <text x="60" y="530" class="table-field">   phone</text>
+                    <text x="60" y="550" class="table-field">   first_name</text>
+                    <text x="60" y="570" class="table-field">   last_name</text>
+                    <text x="60" y="590" class="table-field">   nationality</text>
+                    <text x="60" y="610" class="table-field">   loyalty_tier</text>
+                    <text x="60" y="630" class="table-field">   total_bookings</text>
+                    <text x="60" y="650" class="table-field">   registered_at</text>
+                    <text x="60" y="670" class="table-field">   created_at</text>
+                </g>
+
+                <!-- TRAVELERS Table -->
+                <g id="travelers">
+                    <rect x="450" y="420" width="280" height="220" class="table-box"/>
+                    <rect x="450" y="420" width="280" height="35" class="table-header"/>
+                    <text x="550" y="442" class="table-title">TRAVELERS</text>
+                    
+                    <text x="460" y="470" class="table-field pk">PK traveler_id</text>
+                    <text x="460" y="490" class="table-field">   traveler_uuid</text>
+                    <text x="460" y="510" class="table-field fk">FK customer_id</text>
+                    <text x="460" y="530" class="table-field fk">FK tenant_id</text>
+                    <text x="460" y="550" class="table-field">   first_name</text>
+                    <text x="460" y="570" class="table-field">   last_name</text>
+                    <text x="460" y="590" class="table-field">   document_type</text>
+                    <text x="460" y="610" class="table-field">   document_number</text>
+                    <text x="460" y="630" class="table-field">   created_at</text>
+                </g>
+
+                <!-- BOOKINGS Table (Central) -->
+                <g id="bookings">
+                    <rect x="850" y="700" width="320" height="400" class="table-box"/>
+                    <rect x="850" y="700" width="320" height="35" class="table-header" style="fill: #e53e3e;"/>
+                    <text x="950" y="722" class="table-title">BOOKINGS (Core)</text>
+                    
+                    <text x="860" y="750" class="table-field pk">PK booking_id</text>
+                    <text x="860" y="770" class="table-field">   booking_uuid</text>
+                    <text x="860" y="790" class="table-field">   booking_reference</text>
+                    <text x="860" y="810" class="table-field fk">FK tenant_id</text>
+                    <text x="860" y="830" class="table-field fk">FK customer_id</text>
+                    <text x="860" y="850" class="table-field fk">FK booked_by_user_id</text>
+                    <text x="860" y="870" class="table-field">   booking_type</text>
+                    <text x="860" y="890" class="table-field">   origin_code</text>
+                    <text x="860" y="910" class="table-field">   destination_code</text>
+                    <text x="860" y="930" class="table-field">   travel_start_date</text>
+                    <text x="860" y="950" class="table-field">   total_amount</text>
+                    <text x="860" y="970" class="table-field">   commission_amount</text>
+                    <text x="860" y="990" class="table-field">   payment_status</text>
+                    <text x="860" y="1010" class="table-field">   booking_status</text>
+                    <text x="860" y="1030" class="table-field">   pnr</text>
+                    <text x="860" y="1050" class="table-field">   booking_date</text>
+                    <text x="860" y="1070" class="table-field">   created_at</text>
+                    <text x="860" y="1090" class="table-field">   updated_at</text>
+                </g>
+
+                <!-- FLIGHT_BOOKINGS Table -->
+                <g id="flight_bookings">
+                    <rect x="1300" y="700" width="300" height="340" class="table-box"/>
+                    <rect x="1300" y="700" width="300" height="35" class="table-header"/>
+                    <text x="1380" y="722" class="table-title">FLIGHT_BOOKINGS</text>
+                    
+                    <text x="1310" y="750" class="table-field pk">PK flight_booking_id</text>
+                    <text x="1310" y="770" class="table-field fk">FK booking_id</text>
+                    <text x="1310" y="790" class="table-field">   airline_code</text>
+                    <text x="1310" y="810" class="table-field">   airline_name</text>
+                    <text x="1310" y="830" class="table-field">   flight_number</text>
+                    <text x="1310" y="850" class="table-field">   origin_airport</text>
+                    <text x="1310" y="870" class="table-field">   destination_airport</text>
+                    <text x="1310" y="890" class="table-field">   departure_datetime</text>
+                    <text x="1310" y="910" class="table-field">   arrival_datetime</text>
+                    <text x="1310" y="930" class="table-field">   cabin_class</text>
+                    <text x="1310" y="950" class="table-field">   booking_class</text>
+                    <text x="1310" y="970" class="table-field">   baggage_allowance</text>
+                    <text x="1310" y="990" class="table-field">   is_direct</text>
+                    <text x="1310" y="1010" class="table-field">   flight_status</text>
+                    <text x="1310" y="1030" class="table-field">   created_at</text>
+                </g>
+
+                <!-- BOOKING_TRAVELERS Junction -->
+                <g id="booking_travelers">
+                    <rect x="850" y="420" width="280" height="200" class="table-box"/>
+                    <rect x="850" y="420" width="280" height="35" class="table-header" style="fill: #805ad5;"/>
+                    <text x="920" y="442" class="table-title">BOOKING_TRAVELERS</text>
+                    
+                    <text x="860" y="470" class="table-field pk">PK booking_traveler_id</text>
+                    <text x="860" y="490" class="table-field fk">FK booking_id</text>
+                    <text x="860" y="510" class="table-field fk">FK traveler_id</text>
+                    <text x="860" y="530" class="table-field">   traveler_type</text>
+                    <text x="860" y="550" class="table-field">   ticket_number</text>
+                    <text x="860" y="570" class="table-field">   seat_number</text>
+                    <text x="860" y="590" class="table-field">   meal_preference</text>
+                    <text x="860" y="610" class="table-field">   created_at</text>
+                </g>
+
+                <!-- PAYMENTS Table -->
+                <g id="payments">
+                    <rect x="50" y="1600" width="300" height="340" class="table-box"/>
+                    <rect x="50" y="1600" width="300" height="35" class="table-header"/>
+                    <text x="150" y="1622" class="table-title">PAYMENTS</text>
+                    
+                    <text x="60" y="1650" class="table-field pk">PK payment_id</text>
+                    <text x="60" y="1670" class="table-field">   payment_uuid</text>
+                    <text x="60" y="1690" class="table-field fk">FK booking_id</text>
+                    <text x="60" y="1710" class="table-field fk">FK tenant_id</text>
+                    <text x="60" y="1730" class="table-field">   payment_reference</text>
+                    <text x="60" y="1750" class="table-field">   transaction_id</text>
+                    <text x="60" y="1770" class="table-field">   amount</text>
+                    <text x="60" y="1790" class="table-field">   payment_method</text>
+                    <text x="60" y="1810" class="table-field">   payment_gateway</text>
+                    <text x="60" y="1830" class="table-field">   payment_status</text>
+                    <text x="60" y="1850" class="table-field">   gateway_order_id</text>
+                    <text x="60" y="1870" class="table-field">   card_last_four</text>
+                    <text x="60" y="1890" class="table-field">   initiated_at</text>
+                    <text x="60" y="1910" class="table-field">   captured_at</text>
+                    <text x="60" y="1930" class="table-field">   created_at</text>
+                </g>
+
+                <!-- REFUNDS Table -->
+                <g id="refunds">
+                    <rect x="450" y="1650" width="280" height="240" class="table-box"/>
+                    <rect x="450" y="1650" width="280" height="35" class="table-header"/>
+                    <text x="550" y="1672" class="table-title">REFUNDS</text>
+                    
+                    <text x="460" y="1700" class="table-field pk">PK refund_id</text>
+                    <text x="460" y="1720" class="table-field">   refund_uuid</text>
+                    <text x="460" y="1740" class="table-field fk">FK booking_id</text>
+                    <text x="460" y="1760" class="table-field fk">FK payment_id</text>
+                    <text x="460" y="1780" class="table-field">   refund_reference</text>
+                    <text x="460" y="1800" class="table-field">   refund_amount</text>
+                    <text x="460" y="1820" class="table-field">   net_refund_amount</text>
+                    <text x="460" y="1840" class="table-field">   refund_status</text>
+                    <text x="460" y="1860" class="table-field">   processed_at</text>
+                    <text x="460" y="1880" class="table-field">   created_at</text>
+                </g>
+
+                <!-- COMMISSIONS Table -->
+                <g id="commissions">
+                    <rect x="850" y="1600" width="300" height="320" class="table-box"/>
+                    <rect x="850" y="1600" width="300" height="35" class="table-header"/>
+                    <text x="940" y="1622" class="table-title">COMMISSIONS</text>
+                    
+                    <text x="860" y="1650" class="table-field pk">PK commission_id</text>
+                    <text x="860" y="1670" class="table-field">   commission_uuid</text>
+                    <text x="860" y="1690" class="table-field fk">FK tenant_id</text>
+                    <text x="860" y="1710" class="table-field fk">FK booking_id</text>
+                    <text x="860" y="1730" class="table-field fk">FK user_id</text>
+                    <text x="860" y="1750" class="table-field">   booking_type</text>
+                    <text x="860" y="1770" class="table-field">   base_amount</text>
+                    <text x="860" y="1790" class="table-field">   commission_percentage</text>
+                    <text x="860" y="1810" class="table-field">   commission_amount</text>
+                    <text x="860" y="1830" class="table-field">   tds_amount</text>
+                    <text x="860" y="1850" class="table-field">   net_commission</text>
+                    <text x="860" y="1870" class="table-field">   commission_status</text>
+                    <text x="860" y="1890" class="table-field">   settlement_date</text>
+                    <text x="860" y="1910" class="table-field">   created_at</text>
+                </g>
+
+                <!-- INVOICES Table -->
+                <g id="invoices">
+                    <rect x="1250" y="1600" width="300" height="340" class="table-box"/>
+                    <rect x="1250" y="1600" width="300" height="35" class="table-header"/>
+                    <text x="1350" y="1622" class="table-title">INVOICES</text>
+                    
+                    <text x="1260" y="1650" class="table-field pk">PK invoice_id</text>
+                    <text x="1260" y="1670" class="table-field">   invoice_uuid</text>
+                    <text x="1260" y="1690" class="table-field fk">FK tenant_id</text>
+                    <text x="1260" y="1710" class="table-field fk">FK booking_id</text>
+                    <text x="1260" y="1730" class="table-field fk">FK customer_id</text>
+                    <text x="1260" y="1750" class="table-field">   invoice_number</text>
+                    <text x="1260" y="1770" class="table-field">   invoice_date</text>
+                    <text x="1260" y="1790" class="table-field">   base_fare</text>
+                    <text x="1260" y="1810" class="table-field">   cgst_amount</text>
+                    <text x="1260" y="1830" class="table-field">   sgst_amount</text>
+                    <text x="1260" y="1850" class="table-field">   igst_amount</text>
+                    <text x="1260" y="1870" class="table-field">   grand_total</text>
+                    <text x="1260" y="1890" class="table-field">   payment_status</text>
+                    <text x="1260" y="1910" class="table-field">   pdf_url</text>
+                    <text x="1260" y="1930" class="table-field">   created_at</text>
+                </g>
+
+                <!-- ROLES Table -->
+                <g id="roles">
+                    <rect x="850" y="60" width="280" height="200" class="table-box"/>
+                    <rect x="850" y="60" width="280" height="35" class="table-header"/>
+                    <text x="950" y="82" class="table-title">ROLES</text>
+                    
+                    <text x="860" y="110" class="table-field pk">PK role_id</text>
+                    <text x="860" y="130" class="table-field">   role_uuid</text>
+                    <text x="860" y="150" class="table-field fk">FK tenant_id</text>
+                    <text x="860" y="170" class="table-field">   role_name</text>
+                    <text x="860" y="190" class="table-field">   role_code</text>
+                    <text x="860" y="210" class="table-field">   is_system_role</text>
+                    <text x="860" y="230" class="table-field">   created_at</text>
+                    <text x="860" y="250" class="table-field">   is_deleted</text>
+                </g>
+
+                <!-- USER_ROLES Junction -->
+                <g id="user_roles">
+                    <rect x="850" y="280" width="280" height="120" class="table-box"/>
+                    <rect x="850" y="280" width="280" height="35" class="table-header" style="fill: #805ad5;"/>
+                    <text x="950" y="302" class="table-title">USER_ROLES</text>
+                    
+                    <text x="860" y="330" class="table-field pk">PK user_role_id</text>
+                    <text x="860" y="350" class="table-field fk">FK user_id</text>
+                    <text x="860" y="370" class="table-field fk">FK role_id</text>
+                    <text x="860" y="390" class="table-field">   assigned_at</text>
+                </g>
+
+                <!-- PERMISSIONS Table -->
+                <g id="permissions">
+                    <rect x="1250" y="80" width="280" height="160" class="table-box"/>
+                    <rect x="1250" y="80" width="280" height="35" class="table-header"/>
+                    <text x="1340" y="102" class="table-title">PERMISSIONS</text>
+                    
+                    <text x="1260" y="130" class="table-field pk">PK permission_id</text>
+                    <text x="1260" y="150" class="table-field">   permission_code</text>
+                    <text x="1260" y="170" class="table-field">   permission_name</text>
+                    <text x="1260" y="190" class="table-field">   module</text>
+                    <text x="1260" y="210" class="table-field">   created_at</text>
+                    <text x="1260" y="230" class="table-field">   is_deleted</text>
+                </g>
+
+                <!-- ROLE_PERMISSIONS Junction -->
+                <g id="role_permissions">
+                    <rect x="1250" y="280" width="280" height="120" class="table-box"/>
+                    <rect x="1250" y="280" width="280" height="35" class="table-header" style="fill: #805ad5;"/>
+                    <text x="1320" y="302" class="table-title">ROLE_PERMISSIONS</text>
+                    
+                    <text x="1260" y="330" class="table-field pk">PK role_permission_id</text>
+                    <text x="1260" y="350" class="table-field fk">FK role_id</text>
+                    <text x="1260" y="370" class="table-field fk">FK permission_id</text>
+                    <text x="1260" y="390" class="table-field">   granted_at</text>
+                </g>
+
+                <!-- SECURITY SCHEMA -->
+                <!-- USER_SESSIONS -->
+                <g id="user_sessions">
+                    <rect x="1700" y="60" width="300" height="280" class="table-box"/>
+                    <rect x="1700" y="60" width="300" height="35" class="table-header" style="fill: #38a169;"/>
+                    <text x="1790" y="82" class="table-title">sec.USER_SESSIONS</text>
+                    
+                    <text x="1710" y="110" class="table-field pk">PK session_id</text>
+                    <text x="1710" y="130" class="table-field fk">FK user_id</text>
+                    <text x="1710" y="150" class="table-field fk">FK customer_id</text>
+                    <text x="1710" y="170" class="table-field fk">FK tenant_id</text>
+                    <text x="1710" y="190" class="table-field">   session_token</text>
+                    <text x="1710" y="210" class="table-field">   ip_address</text>
+                    <text x="1710" y="230" class="table-field">   device_type</text>
+                    <text x="1710" y="250" class="table-field">   is_active</text>
+                    <text x="1710" y="270" class="table-field">   created_at</text>
+                    <text x="1710" y="290" class="table-field">   expires_at</text>
+                    <text x="1710" y="310" class="table-field">   last_activity_at</text>
+                    <text x="1710" y="330" class="table-field">   logged_out_at</text>
+                </g>
+
+                <!-- API_KEYS -->
+                <g id="api_keys">
+                    <rect x="1700" y="380" width="300" height="260" class="table-box"/>
+                    <rect x="1700" y="380" width="300" height="35" class="table-header" style="fill: #38a169;"/>
+                    <text x="1810" y="402" class="table-title">sec.API_KEYS</text>
+                    
+                    <text x="1710" y="430" class="table-field pk">PK api_key_id</text>
+                    <text x="1710" y="450" class="table-field fk">FK tenant_id</text>
+                    <text x="1710" y="470" class="table-field">   key_name</text>
+                    <text x="1710" y="490" class="table-field">   api_key (hashed)</text>
+                    <text x="1710" y="510" class="table-field">   scopes (JSON)</text>
+                    <text x="1710" y="530" class="table-field">   rate_limit_per_min</text>
+                    <text x="1710" y="550" class="table-field">   is_active</text>
+                    <text x="1710" y="570" class="table-field">   last_used_at</text>
+                    <text x="1710" y="590" class="table-field">   expires_at</text>
+                    <text x="1710" y="610" class="table-field">   created_at</text>
+                    <text x="1710" y="630" class="table-field">   revoked_at</text>
+                </g>
+
+                <!-- AUDIT SCHEMA -->
+                <!-- ACTIVITY_LOGS -->
+                <g id="activity_logs">
+                    <rect x="1700" y="1600" width="320" height="320" class="table-box"/>
+                    <rect x="1700" y="1600" width="320" height="35" class="table-header" style="fill: #d69e2e;"/>
+                    <text x="1780" y="1622" class="table-title">audit.ACTIVITY_LOGS</text>
+                    
+                    <text x="1710" y="1650" class="table-field pk">PK activity_log_id</text>
+                    <text x="1710" y="1670" class="table-field fk">FK tenant_id</text>
+                    <text x="1710" y="1690" class="table-field">   actor_type</text>
+                    <text x="1710" y="1710" class="table-field">   actor_id</text>
+                    <text x="1710" y="1730" class="table-field">   action</text>
+                    <text x="1710" y="1750" class="table-field">   entity_type</text>
+                    <text x="1710" y="1770" class="table-field">   entity_id</text>
+                    <text x="1710" y="1790" class="table-field">   description</text>
+                    <text x="1710" y="1810" class="table-field">   changes (JSON)</text>
+                    <text x="1710" y="1830" class="table-field">   ip_address</text>
+                    <text x="1710" y="1850" class="table-field">   user_agent</text>
+                    <text x="1710" y="1870" class="table-field">   status</text>
+                    <text x="1710" y="1890" class="table-field">   response_time_ms</text>
+                    <text x="1710" y="1910" class="table-field">   created_at</text>
+                </g>
+
+                <!-- ANALYTICS SCHEMA -->
+                <!-- DAILY_BOOKING_SUMMARY -->
+                <g id="daily_summary">
+                    <rect x="50" y="2400" width="360" height="340" class="table-box"/>
+                    <rect x="50" y="2400" width="360" height="35" class="table-header" style="fill: #9f7aea;"/>
+                    <text x="120" y="2422" class="table-title">analytics.DAILY_BOOKING_SUMMARY</text>
+                    
+                    <text x="60" y="2450" class="table-field pk">PK summary_id</text>
+                    <text x="60" y="2470" class="table-field">   summary_date</text>
+                    <text x="60" y="2490" class="table-field fk">FK tenant_id</text>
+                    <text x="60" y="2510" class="table-field">   booking_type</text>
+                    <text x="60" y="2530" class="table-field">   origin_code</text>
+                    <text x="60" y="2550" class="table-field">   destination_code</text>
+                    <text x="60" y="2570" class="table-field">   total_bookings</text>
+                    <text x="60" y="2590" class="table-field">   confirmed_bookings</text>
+                    <text x="60" y="2610" class="table-field">   total_revenue</text>
+                    <text x="60" y="2630" class="table-field">   total_commission</text>
+                    <text x="60" y="2650" class="table-field">   new_customers</text>
+                    <text x="60" y="2670" class="table-field">   avg_booking_value</text>
+                    <text x="60" y="2690" class="table-field">   conversion_rate</text>
+                    <text x="60" y="2710" class="table-field">   calculated_at</text>
+                    <text x="60" y="2730" class="table-field">   created_at</text>
+                </g>
+
+                <!-- AGENT_PERFORMANCE -->
+                <g id="agent_performance">
+                    <rect x="500" y="2400" width="340" height="320" class="table-box"/>
+                    <rect x="500" y="2400" width="340" height="35" class="table-header" style="fill: #9f7aea;"/>
+                    <text x="570" y="2422" class="table-title">analytics.AGENT_PERFORMANCE</text>
+                    
+                    <text x="510" y="2450" class="table-field pk">PK performance_id</text>
+                    <text x="510" y="2470" class="table-field">   period_type</text>
+                    <text x="510" y="2490" class="table-field">   period_start_date</text>
+                    <text x="510" y="2510" class="table-field fk">FK tenant_id</text>
+                    <text x="510" y="2530" class="table-field fk">FK user_id</text>
+                    <text x="510" y="2550" class="table-field">   total_bookings</text>
+                    <text x="510" y="2570" class="table-field">   successful_bookings</text>
+                    <text x="510" y="2590" class="table-field">   total_revenue</text>
+                    <text x="510" y="2610" class="table-field">   total_commission_earned</text>
+                    <text x="510" y="2630" class="table-field">   commission_paid</text>
+                    <text x="510" y="2650" class="table-field">   customers_acquired</text>
+                    <text x="510" y="2670" class="table-field">   avg_booking_value</text>
+                    <text x="510" y="2690" class="table-field">   rank_in_tenant</text>
+                    <text x="510" y="2710" class="table-field">   calculated_at</text>
+                </g>
+
+                <!-- MASTER DATA -->
+                <!-- AIRLINES -->
+                <g id="airlines">
+                    <rect x="1700" y="800" width="280" height="220" class="table-box"/>
+                    <rect x="1700" y="800" width="280" height="35" class="table-header" style="fill: #718096;"/>
+                    <text x="1800" y="822" class="table-title">AIRLINES</text>
+                    
+                    <text x="1710" y="850" class="table-field pk">PK airline_id</text>
+                    <text x="1710" y="870" class="table-field">   iata_code</text>
+                    <text x="1710" y="890" class="table-field">   icao_code</text>
+                    <text x="1710" y="910" class="table-field">   airline_name</text>
+                    <text x="1710" y="930" class="table-field">   country</text>
+                    <text x="1710" y="950" class="table-field">   airline_type</text>
+                    <text x="1710" y="970" class="table-field">   logo_url</text>
+                    <text x="1710" y="990" class="table-field">   is_active</text>
+                    <text x="1710" y="1010" class="table-field">   created_at</text>
+                </g>
+
+                <!-- AIRPORTS -->
+                <g id="airports">
+                    <rect x="1700" y="1080" width="280" height="260" class="table-box"/>
+                    <rect x="1700" y="1080" width="280" height="35" class="table-header" style="fill: #718096;"/>
+                    <text x="1800" y="1102" class="table-title">AIRPORTS</text>
+                    
+                    <text x="1710" y="1130" class="table-field pk">PK airport_id</text>
+                    <text x="1710" y="1150" class="table-field">   iata_code</text>
+                    <text x="1710" y="1170" class="table-field">   icao_code</text>
+                    <text x="1710" y="1190" class="table-field">   airport_name</text>
+                    <text x="1710" y="1210" class="table-field">   city</text>
+                    <text x="1710" y="1230" class="table-field">   country</text>
+                    <text x="1710" y="1250" class="table-field">   latitude</text>
+                    <text x="1710" y="1270" class="table-field">   longitude</text>
+                    <text x="1710" y="1290" class="table-field">   timezone</text>
+                    <text x="1710" y="1310" class="table-field">   is_active</text>
+                    <text x="1710" y="1330" class="table-field">   created_at</text>
+                </g>
+
+                <!-- NOTIFICATIONS -->
+                <g id="notifications">
+                    <rect x="450" y="1200" width="300" height="300" class="table-box"/>
+                    <rect x="450" y="1200" width="300" height="35" class="table-header"/>
+                    <text x="540" y="1222" class="table-title">NOTIFICATIONS</text>
+                    
+                    <text x="460" y="1250" class="table-field pk">PK notification_id</text>
+                    <text x="460" y="1270" class="table-field fk">FK tenant_id</text>
+                    <text x="460" y="1290" class="table-field fk">FK user_id</text>
+                    <text x="460" y="1310" class="table-field fk">FK customer_id</text>
+                    <text x="460" y="1330" class="table-field">   notification_type</text>
+                    <text x="460" y="1350" class="table-field">   title</text>
+                    <text x="460" y="1370" class="table-field">   message</text>
+                    <text x="460" y="1390" class="table-field">   priority</text>
+                    <text x="460" y="1410" class="table-field">   reference_type</text>
+                    <text x="460" y="1430" class="table-field">   reference_id</text>
+                    <text x="460" y="1450" class="table-field">   is_read</text>
+                    <text x="460" y="1470" class="table-field">   created_at</text>
+                    <text x="460" y="1490" class="table-field">   read_at</text>
+                </g>
+
+                <!-- EMAIL_LOGS -->
+                <g id="email_logs">
+                    <rect x="1300" y="1200" width="280" height="260" class="table-box"/>
+                    <rect x="1300" y="1200" width="280" height="35" class="table-header"/>
+                    <text x="1390" y="1222" class="table-title">EMAIL_LOGS</text>
+                    
+                    <text x="1310" y="1250" class="table-field pk">PK email_log_id</text>
+                    <text x="1310" y="1270" class="table-field fk">FK tenant_id</text>
+                    <text x="1310" y="1290" class="table-field">   to_email</text>
+                    <text x="1310" y="1310" class="table-field">   subject</text>
+                    <text x="1310" y="1330" class="table-field">   email_type</text>
+                    <text x="1310" y="1350" class="table-field">   reference_type</text>
+                    <text x="1310" y="1370" class="table-field">   reference_id</text>
+                    <text x="1310" y="1390" class="table-field">   provider</text>
+                    <text x="1310" y="1410" class="table-field">   email_status</text>
+                    <text x="1310" y="1430" class="table-field">   sent_at</text>
+                    <text x="1310" y="1450" class="table-field">   created_at</text>
+                </g>
+
+                <!-- RELATIONSHIPS / CONNECTIONS -->
+                
+                <!-- TENANTS to USERS -->
+                <path d="M 330 180 L 450 180" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="360" y="170" class="cardinality">1:N</text>
+
+                <!-- TENANTS to CUSTOMERS -->
+                <path d="M 190 300 L 190 380" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="200" y="340" class="cardinality">1:N</text>
+
+                <!-- CUSTOMERS to TRAVELERS -->
+                <path d="M 330 530 L 450 530" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="360" y="520" class="cardinality">1:N</text>
+
+                <!-- CUSTOMERS to BOOKINGS -->
+                <path d="M 330 600 Q 590 600, 850 850" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="580" y="700" class="cardinality">1:N</text>
+
+                <!-- USERS to BOOKINGS -->
+                <path d="M 590 340 Q 720 500, 850 850" class="relation-line" marker-end="url(#arrowhead)"/>
+                <text x="720" y="590" class="cardinality">1:N</text>
+
+                <!-- BOOKINGS to FLIGHT_BOOKINGS -->
+                <path d="M 1170 900 L 1300 900" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="1210" y="890" class="cardinality">1:1</text>
+
+                <!-- BOOKINGS to BOOKING_TRAVELERS -->
+                <path d="M 990 700 L 990 620" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="1000" y="660" class="cardinality">1:N</text>
+
+                <!-- TRAVELERS to BOOKING_TRAVELERS -->
+                <path d="M 730 530 L 850 530" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="760" y="520" class="cardinality">1:N</text>
+
+                <!-- BOOKINGS to PAYMENTS -->
+                <path d="M 850 1050 Q 500 1300, 200 1600" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="500" y="1350" class="cardinality">1:N</text>
+
+                <!-- PAYMENTS to REFUNDS -->
+                <path d="M 350 1770 L 450 1770" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="380" y="1760" class="cardinality">1:N</text>
+
+                <!-- BOOKINGS to COMMISSIONS -->
+                <path d="M 1000 1100 L 1000 1600" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="1010" y="1350" class="cardinality">1:N</text>
+
+                <!-- BOOKINGS to INVOICES -->
+                <path d="M 1170 1000 Q 1210 1300, 1400 1600" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+                <text x="1210" y="1300" class="cardinality">1:N</text>
+
+                <!-- USERS to ROLES (via USER_ROLES) -->
+                <path d="M 590 200 L 850 200" class="relation-line" marker-end="url(#arrowhead)"/>
+                <text x="700" y="190" class="cardinality">N:M</text>
+
+                <!-- USER_ROLES to ROLES -->
+                <path d="M 990 280 L 990 260" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+
+                <!-- ROLES to PERMISSIONS (via ROLE_PERMISSIONS) -->
+                <path d="M 1130 160 L 1250 160" class="relation-line" marker-end="url(#arrowhead)"/>
+                <text x="1160" y="150" class="cardinality">N:M</text>
+
+                <!-- ROLE_PERMISSIONS to PERMISSIONS -->
+                <path d="M 1390 280 L 1390 240" class="relation-line-strong" marker-end="url(#arrowhead)"/>
+
+                <!-- USERS/CUSTOMERS to USER_SESSIONS -->
+                <path d="M 730 200 Q 1200 300, 1700 200" class="relation-line" marker-end="url(#arrowhead)"/>
+                <text x="1200" y="280" class="cardinality">1:N</text>
+
+                <!-- TENANTS to API_KEYS -->
+                <path d="M 330 200 Q 1000 -50, 1700 450" class="relation-line" marker-end="url(#arrowhead)"/>
+                <text x="1000" y="100" class="cardinality">1:N</text>
+
+                <!-- BOOKINGS to ACTIVITY_LOGS -->
+                <path d="M 1170 900 Q 1435 1200, 1700 1760" class="relation-line" marker-end="url(#arrowhead)"/>
+
+                <!-- BOOKINGS to NOTIFICATIONS -->
+                <path d="M 850 1000 L 750 1350" class="relation-line" marker-end="url(#arrowhead)"/>
+                <text x="780" y="1170" class="cardinality">1:N</text>
+
+                <!-- BOOKINGS to EMAIL_LOGS -->
+                <path d="M 1170 1000 L 1300 1200" class="relation-line" marker-end="url(#arrowhead)"/>
+                <text x="1210" y="1100" class="cardinality">1:N</text>
+
+                <!-- FLIGHT_BOOKINGS to AIRLINES (reference) -->
+                <path d="M 1600 900 L 1700 900" class="relation-line" marker-end="url(#circle-end)" stroke-dasharray="5,5"/>
+
+                <!-- FLIGHT_BOOKINGS to AIRPORTS (reference) -->
+                <path d="M 1600 950 Q 1650 1050, 1700 1190" class="relation-line" marker-end="url(#circle-end)" stroke-dasharray="5,5"/>
+
+                <!-- TENANTS to ANALYTICS -->
+                <path d="M 190 300 Q 120 1900, 230 2400" class="relation-line" marker-end="url(#arrowhead)"/>
+                <text x="120" y="1350" class="cardinality">1:N</text>
+
+                <!-- USERS to AGENT_PERFORMANCE -->
+                <path d="M 590 340 Q 670 1800, 670 2400" class="relation-line" marker-end="url(#arrowhead)"/>
+                <text x="600" y="1400" class="cardinality">1:N</text>
+
+            </svg>
+        </div>
+
+        <div class="info-box">
+            <h3>📊 Database Statistics</h3>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">36</div>
+                    <div class="stat-label">Total Tables</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Database Schemas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label">Foreign Key Relations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">100+</div>
+                    <div class="stat-label">Indexes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">Multi-Tenant</div>
+                    <div class="stat-label">Architecture</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">10+ Years</div>
+                    <div class="stat-label">Scalability Design</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box" style="margin-top: 20px;">
+            <h3>🔑 Key Features</h3>
+            <ul style="margin-left: 20px; color: #4a5568; line-height: 1.8;">
+                <li><strong>Multi-Tenant Architecture:</strong> Row-level security with tenant isolation</li>
+                <li><strong>Complete Audit Trail:</strong> Activity logs and data change tracking</li>
+                <li><strong>Role-Based Access Control:</strong> Flexible permissions system</li>
+                <li><strong>Financial Management:</strong> Payments, refunds, commissions, and invoicing</li>
+                <li><strong>Analytics Ready:</strong> Pre-aggregated summary tables for reporting</li>
+                <li><strong>Security First:</strong> Session management, API keys, encryption support</li>
+                <li><strong>Scalable Design:</strong> Partitioning, indexing, and caching strategies</li>
+                <li><strong>Communication Tracking:</strong> Email and SMS logs with delivery status</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // You can save this as HTML and open in browser, then use browser's print to PDF or screenshot
+        console.log('Database Schema Diagram loaded successfully!');
+        console.log('Right-click and "Save As..." to save as HTML');
+        console.log('Or use Print to PDF to create a PDF version');
+    </script>
+</body>
+</html>
