@@ -29,86 +29,52 @@
 ### 1.1 Multi-Tenant Architecture Pattern
 **Selected Pattern**: Shared Database with Tenant Discriminator (Row-Level Multitenancy)
 
-**Rationale**:
+**Rational**:
 - Cost-effective for thousands of tenants
 - Easier maintenance and updates
 - Efficient resource utilization
 - Simplified backup and recovery
 
-### 4.3 Missing Index Monitoring
+### 1.2 Database Organization
 
-```sql
--- Query to find missing indexes (run periodically)
-SELECT 
-    CONVERT(VARCHAR(30), getdate(), 126) AS runtime,
-    mig.index_group_handle,
-    mid.index_handle,
-    CONVERT(DECIMAL(28,1), migs.avg_total_user_cost * migs.avg_user_impact * (migs.user_seeks + migs.user_scans)) AS improvement_measure,
-    'CREATE INDEX missing_index_' + CONVERT(VARCHAR, mig.index_group_handle) + '_' + CONVERT(VARCHAR, mid.index_handle)
-    + ' ON ' + mid.statement
-    + ' (' + ISNULL(mid.equality_columns,'')
-    + CASE WHEN mid.equality_columns IS NOT NULL AND mid.inequality_columns IS NOT NULL THEN ',' ELSE '' END
-    + ISNULL(mid.inequality_columns, '')
-    + ')'
-    + ISNULL(' INCLUDE (' + mid.included_columns + ')', '') AS create_index_statement
-FROM sys.dm_db_missing_index_groups mig
-INNER JOIN sys.dm_db_missing_index_group_stats migs ON migs.group_handle = mig.index_group_handle
-INNER JOIN sys.dm_db_missing_index_details mid ON mig.index_handle = mid.index_handle
-WHERE CONVERT(DECIMAL(28,1), migs.avg_total_user_cost * migs.avg_user_impact * (migs.user_seeks + migs.user_scans)) > 10
-ORDER BY improvement_measure DESC;
-```
+* **BookingPlatformDB (Primary Database)**
+    * **Core Schema (dbo)**
+    * **Security Schema (sec)**
+    * **Audit Schema (audit)**
+    * **Analytics Schema (analytics)**
+    * **Archive Schema (archive)**
 
-## 5. Partitioning Strategy
 
-### 5.1 Tables Requiring Partitioning
+### 1.3 High-Level Design Principles
 
-Large tables that grow continuously should be partitioned by date:
+1. **Normalization**: 3NF for transactional tables
+2. **Denormalization**: Strategic denormalization for reporting tables
+3. **Soft Deletes**: All records use `is_deleted` flag
+4. **Audit Trail**: Complete history tracking
+5. **Optimistic Locking**: Using `row_version` for concurrency
+6. **UUID + Sequential**: Hybrid ID strategy (clustered on sequential, unique on UUID)
+7. **Temporal Tables**: For critical data history
 
-- bookings - Partition by booking_date (monthly)
-- payments - Partition by created_at (monthly)
-- audit.activity_logs - Partition by created_at (monthly)
-- email_logs - Partition by created_at (weekly)
-- sms_logs - Partition by created_at (weekly)
+---
 
-### 5.2 Partition Implementation Example
+## 2. Schema Design
 
-```sql
--- Create Partition Function (Monthly partitioning for bookings)
-CREATE PARTITION FUNCTION PF_MonthlyBookings (DATETIME2)
-AS RANGE RIGHT FOR VALUES (
-    '2025-01-01', '2025-02-01', '2025-03-01', '2025-04-01',
-    '2025-05-01', '2025-06-01', '2025-07-01', '2025-08-01',
-    '2025-09-01', '2025-10-01', '2025-11-01', '2025-12-01',
-    '2026-01-01' -- Add more as needed
-);
+### 2.1 Entity Relationship Diagram (ERD)
 
--- Create Partition Scheme
-CREATE PARTITION SCHEME PS_MonthlyBookings
-AS PARTITION PF_MonthlyBookings
-ALL TO ([PRIMARY]); -- Or specify different filegroups for each partition
+* **Core Entities**
+    * **Tenants** (Agents/Org)
+        * `1:N` → **Users**
+            * `1:N` → **Customers**
+                * `1:N` → **Bookings**
+                    * `1:1` → **Flight Bookings**
+        * `1:N` → **Settings**
+        * `1:N` → **Commission Rules**
+    * **Travelers**
+        * `N:M` → **Bookings**
 
--- Apply to table (during creation or via rebuild)
--- Modify bookings table creation:
-ALTER TABLE dbo.bookings DROP CONSTRAINT PK_bookings;
 
-ALTER TABLE dbo.bookings ADD CONSTRAINT PK_bookings 
-    PRIMARY KEY CLUSTERED (booking_id, booking_date)
-    ON PS_MonthlyBookings(booking_date);
+### 2.2 Schema Categories
 
--- Automated partition management stored procedure
-CREATE PROCEDURE dbo.sp_ManagePartitions
-AS
-BEGIN
-    -- Add new partition for next month if not exists
-    -- Remove old partitions beyond retention period (e.g., 7 years)
-    
-    DECLARE @NextMonth DATE = DATEADD(MONTH, 1, EOMONTH(GETDATE()));
-    DECLARE @OldMonth DATE = DATEADD(YEAR, -7, DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0));
-    
-    -- Logic to split/merge partitions
-    -- (Implementation details depend on specific requirements)
-END;
-```
 #### Core Schemas
 1. **Identity & Access**: Users, Roles, Permissions
 2. **Multi-Tenancy**: Tenants, Tenant Settings
