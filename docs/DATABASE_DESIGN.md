@@ -3,7 +3,7 @@
 
 ### Version: 1.0
 ### Database: Microsoft SQL Server 2019+
-### ORM: Sequelize
+
 
 ---
 
@@ -26,14 +26,14 @@
 
 ## 1. Database Architecture Overview
 
-### 1.1 Multi-Tenant Architecture Pattern
-**Selected Pattern**: Shared Database with Tenant Discriminator (Row-Level Multitenancy)
+### 1.1 Architecture Pattern
+**Selected Pattern**: B2B Single-Tenant Database
 
 **Rational**:
-- Cost-effective for thousands of tenants
-- Easier maintenance and updates
-- Efficient resource utilization
-- Simplified backup and recovery
+- Integrated system where Admin has full control
+- Agent wallets acting as an immutable ledger
+- Secure and simplified reporting
+- Efficient for standard B2B workflows
 
 ### 1.2 Database Organization
 
@@ -62,12 +62,13 @@
 ### 2.1 Entity Relationship Diagram (ERD)
 
 * **Core Entities**
-    * **Tenants** (Agents/Org)
-        * `1:N` → **Users**
-            * `1:N` → **Customers**
-                * `1:N` → **Bookings**
-                    * `1:1` → **Flight Bookings**
-        * `1:N` → **Settings**
+    * **Users** (Admin, Agents)
+        * `1:1` → **Wallets**
+            * `1:N` → **Wallet Transactions**
+        * `1:N` → **Payouts**
+        * `1:N` → **Customers**
+            * `1:N` → **Bookings**
+                * `1:1` → **Flight Bookings**
         * `1:N` → **Commission Rules**
     * **Travelers**
         * `N:M` → **Bookings**
@@ -76,8 +77,8 @@
 ### 2.2 Schema Categories
 
 #### Core Schemas
-1. **Identity & Access**: Users, Roles, Permissions
-2. **Multi-Tenancy**: Tenants, Tenant Settings
+2. **B2B Identity**: Users (Admin, Agents), Roles, Permissions
+3. **Wallet System**: Wallets, Wallet Transactions, Payouts
 3. **Customer Management**: Customers, Travelers
 4. **Booking Management**: Bookings, Booking Items
 5. **Service Specific**: Flights, Hotels, Buses
@@ -88,86 +89,79 @@
 
 ## 3. Detailed Table Specifications
 
-### 3.1 CORE SCHEMA - Multi-Tenancy & Identity
+### 3.1 CORE SCHEMA - single-Tenancy & Identity
 
-#### 3.1.1 Table: `tenants`
-**Purpose**: Store agent/organization information (multi-tenant root)
+#### 3.1.1 Table: wallets
+**Purpose**: Store agent ledger balances
 
 ```sql
 
-CREATE TABLE dbo.tenants (
-    -- Primary Key
-    tenant_id BIGINT IDENTITY(1,1) NOT NULL,
-    tenant_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+CREATE TABLE dbo.wallets (
+    wallet_id BIGINT IDENTITY(1,1) NOT NULL,
+    user_id BIGINT NOT NULL,
     
-    -- Business Data
-    tenant_name NVARCHAR(255) NOT NULL,
-    tenant_code NVARCHAR(50) NOT NULL, -- Unique code (e.g., 'AGENT001')
-    tenant_type VARCHAR(50) NOT NULL, -- 'AGENT', 'CORPORATE', 'FRANCHISE'
+    balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+    commission_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     
-    -- Contact Information
-    business_name NVARCHAR(255) NOT NULL,
-    email NVARCHAR(255) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    alternate_phone VARCHAR(20),
-    
-    -- Address
-    address_line1 NVARCHAR(500),
-    address_line2 NVARCHAR(500),
-    city NVARCHAR(100),
-    state NVARCHAR(100),
-    country VARCHAR(2) NOT NULL DEFAULT 'IN', -- ISO country code
-    postal_code VARCHAR(20),
-    
-    -- Business Details
-    business_registration_no VARCHAR(100), -- GST, PAN, etc.
-    tax_id VARCHAR(100),
-    
-    -- Status & Configuration
-    status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- 'PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE'
-    subscription_plan VARCHAR(50) DEFAULT 'BASIC', -- 'BASIC', 'PREMIUM', 'ENTERPRISE'
-    commission_model VARCHAR(50) DEFAULT 'PERCENTAGE', -- 'PERCENTAGE', 'FLAT', 'TIERED'
-    
-    -- Limits & Quotas
-    max_users INT DEFAULT 5,
-    max_monthly_bookings INT DEFAULT 1000,
-    
-    -- Financial
-    credit_limit DECIMAL(15,2) DEFAULT 0,
-    current_balance DECIMAL(15,2) DEFAULT 0,
-    
-    -- Security
-    allowed_ip_addresses NVARCHAR(MAX), -- JSON array
-    api_enabled BIT DEFAULT 0,
-    api_key_hash VARCHAR(255),
-    
-    -- Timestamps
-    onboarded_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    verified_at DATETIME2,
-    last_active_at DATETIME2,
-    
-    -- Audit Fields
     created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     updated_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    created_by BIGINT,
-    updated_by BIGINT,
-    is_deleted BIT NOT NULL DEFAULT 0,
-    deleted_at DATETIME2,
     row_version ROWVERSION,
     
-    -- Constraints
-    CONSTRAINT PK_tenants PRIMARY KEY CLUSTERED (tenant_id),
-    CONSTRAINT UQ_tenants_uuid UNIQUE (tenant_uuid),
-    CONSTRAINT UQ_tenants_code UNIQUE (tenant_code),
-    CONSTRAINT UQ_tenants_email UNIQUE (email),
-    CONSTRAINT CK_tenants_status CHECK (status IN ('PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE')),
-    CONSTRAINT CK_tenants_type CHECK (tenant_type IN ('AGENT', 'CORPORATE', 'FRANCHISE'))
+    CONSTRAINT PK_wallets PRIMARY KEY CLUSTERED (wallet_id),
+    CONSTRAINT UQ_wallets_user UNIQUE (user_id)
 );
 
--- Indexes
-CREATE NONCLUSTERED INDEX IX_tenants_status ON dbo.tenants(status) WHERE is_deleted = 0;
-CREATE NONCLUSTERED INDEX IX_tenants_created_at ON dbo.tenants(created_at);
-CREATE NONCLUSTERED INDEX IX_tenants_country ON dbo.tenants(country) WHERE is_deleted = 0;
+CREATE NONCLUSTERED INDEX IX_wallets_status ON dbo.wallets(status);
+```
+
+#### 3.1.1b Table: wallet_transactions
+**Purpose**: Immutable double-entry ledger for wallet balances
+
+```sql
+CREATE TABLE dbo.wallet_transactions (
+    transaction_id BIGINT IDENTITY(1,1) NOT NULL,
+    wallet_id BIGINT NOT NULL,
+    
+    transaction_type VARCHAR(50) NOT NULL, -- 'RECHARGE', 'BOOKING_DEDUCTION', 'COMMISSION_CREDIT', 'PAYOUT'
+    amount DECIMAL(15,2) NOT NULL,
+    balance_before DECIMAL(15,2) NOT NULL,
+    balance_after DECIMAL(15,2) NOT NULL,
+    
+    transaction_status VARCHAR(20) NOT NULL DEFAULT 'COMPLETED',
+    reference_type VARCHAR(50), -- 'BOOKING', 'PAYOUT_REQUEST', 'PAYMENT_GATEWAY'
+    reference_id BIGINT,
+    
+    created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    
+    CONSTRAINT PK_wallet_transactions PRIMARY KEY CLUSTERED (transaction_id),
+    CONSTRAINT FK_wallet_transactions_wallet FOREIGN KEY (wallet_id) REFERENCES dbo.wallets(wallet_id)
+);
+CREATE NONCLUSTERED INDEX IX_wallet_transactions_wallet ON dbo.wallet_transactions(wallet_id);
+```
+
+#### 3.1.1c Table: payouts
+**Purpose**: Agent requests to withdraw commission to bank
+
+```sql
+CREATE TABLE dbo.payouts (
+    payout_id BIGINT IDENTITY(1,1) NOT NULL,
+    user_id BIGINT NOT NULL,
+    
+    amount DECIMAL(15,2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- 'PENDING', 'APPROVED', 'REJECTED', 'PROCESSED'
+    payout_method VARCHAR(50) NOT NULL, -- 'BANK_TRANSFER', 'UPI'
+    bank_details NVARCHAR(MAX), -- JSON with account no, IFSC
+    
+    processed_by BIGINT, -- admin user_id
+    processed_at DATETIME2,
+    
+    created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    updated_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    
+    CONSTRAINT PK_payouts PRIMARY KEY CLUSTERED (payout_id)
+);
+CREATE NONCLUSTERED INDEX IX_payouts_user ON dbo.payouts(user_id);
 ```
 
 #### 3.1.2 Table: users
@@ -242,15 +236,13 @@ CREATE TABLE dbo.users (
     CONSTRAINT UQ_users_uuid UNIQUE (user_uuid),
     CONSTRAINT UQ_users_username UNIQUE (username),
     CONSTRAINT UQ_users_email UNIQUE (email),
-    CONSTRAINT FK_users_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id),
     CONSTRAINT CK_users_status CHECK (status IN ('ACTIVE', 'INACTIVE', 'LOCKED', 'SUSPENDED')),
-    CONSTRAINT CK_users_type CHECK (user_type IN ('SUPER_ADMIN', 'TENANT_ADMIN', 'AGENT', 'STAFF'))
+    CONSTRAINT CK_users_type CHECK (user_type IN ('SUPER_ADMIN', 'ADMIN', 'AGENT', 'STAFF'))
 );
 
 -- Indexes
-CREATE NONCLUSTERED INDEX IX_users_tenant ON dbo.users(tenant_id) WHERE is_deleted = 0;
 CREATE NONCLUSTERED INDEX IX_users_email ON dbo.users(email) WHERE is_deleted = 0;
-CREATE NONCLUSTERED INDEX IX_users_status ON dbo.users(status, tenant_id) WHERE is_deleted = 0;
+CREATE NONCLUSTERED INDEX IX_users_status ON dbo.users(status) WHERE is_deleted = 0;
 CREATE NONCLUSTERED INDEX IX_users_last_login ON dbo.users(last_login_at DESC);
 ```
 
@@ -262,7 +254,6 @@ Purpose: Role-based access control
 CREATE TABLE dbo.roles (
     role_id BIGINT IDENTITY(1,1) NOT NULL,
     role_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
-    tenant_id BIGINT, -- NULL for global roles
     
     role_name NVARCHAR(100) NOT NULL,
     role_code VARCHAR(50) NOT NULL,
@@ -277,10 +268,8 @@ CREATE TABLE dbo.roles (
     
     CONSTRAINT PK_roles PRIMARY KEY CLUSTERED (role_id),
     CONSTRAINT UQ_roles_uuid UNIQUE (role_uuid),
-    CONSTRAINT UQ_roles_code_tenant UNIQUE (role_code, tenant_id)
+    CONSTRAINT UQ_roles_code UNIQUE (role_code)
 );
-
-CREATE NONCLUSTERED INDEX IX_roles_tenant ON dbo.roles(tenant_id) WHERE is_deleted = 0;
 ```
 #### 3.1.4 Table: permissions
 Purpose: Granular permissions
@@ -362,8 +351,8 @@ CREATE TABLE dbo.customers (
     customer_id BIGINT IDENTITY(1,1) NOT NULL,
     customer_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
     
-    -- Multi-Tenant (which agent acquired this customer)
-    tenant_id BIGINT NOT NULL,
+    customer_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    
     referred_by_user_id BIGINT, -- Agent/user who registered this customer
     
     -- Identity
@@ -466,7 +455,6 @@ CREATE TABLE dbo.travelers (
     traveler_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
     
     customer_id BIGINT NOT NULL, -- Owner of this traveler profile
-    tenant_id BIGINT NOT NULL,
     
     -- Personal Information
     title VARCHAR(10),
@@ -510,12 +498,10 @@ CREATE TABLE dbo.travelers (
     
     CONSTRAINT PK_travelers PRIMARY KEY CLUSTERED (traveler_id),
     CONSTRAINT UQ_travelers_uuid UNIQUE (traveler_uuid),
-    CONSTRAINT FK_travelers_customer FOREIGN KEY (customer_id) REFERENCES dbo.customers(customer_id),
-    CONSTRAINT FK_travelers_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id)
+    CONSTRAINT FK_travelers_customer FOREIGN KEY (customer_id) REFERENCES dbo.customers(customer_id)
 );
 
 CREATE NONCLUSTERED INDEX IX_travelers_customer ON dbo.travelers(customer_id) WHERE is_deleted = 0;
-CREATE NONCLUSTERED INDEX IX_travelers_tenant ON dbo.travelers(tenant_id) WHERE is_deleted = 0;
 ```
 #### 3.3 BOOKING MANAGEMENT
 3.3.1 Table: bookings
@@ -527,9 +513,6 @@ CREATE TABLE dbo.bookings (
     -- Primary Key
     booking_id BIGINT IDENTITY(1,1) NOT NULL,
     booking_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
-    
-    -- Multi-Tenant
-    tenant_id BIGINT NOT NULL,
     
     -- Booking Reference
     booking_reference VARCHAR(20) NOT NULL, -- Unique booking number (e.g., 'BKG2025012345')
@@ -628,7 +611,6 @@ CREATE TABLE dbo.bookings (
     CONSTRAINT PK_bookings PRIMARY KEY CLUSTERED (booking_id),
     CONSTRAINT UQ_bookings_uuid UNIQUE (booking_uuid),
     CONSTRAINT UQ_bookings_reference UNIQUE (booking_reference),
-    CONSTRAINT FK_bookings_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id),
     CONSTRAINT FK_bookings_customer FOREIGN KEY (customer_id) REFERENCES dbo.customers(customer_id),
     CONSTRAINT FK_bookings_booked_by FOREIGN KEY (booked_by_user_id) REFERENCES dbo.users(user_id),
     CONSTRAINT CK_bookings_type CHECK (booking_type IN ('FLIGHT', 'HOTEL', 'BUS', 'PACKAGE')),
@@ -637,7 +619,7 @@ CREATE TABLE dbo.bookings (
 );
 
 -- Indexes (Critical for Performance)
-CREATE NONCLUSTERED INDEX IX_bookings_tenant_status ON dbo.bookings(tenant_id, booking_status, booking_date DESC) 
+CREATE NONCLUSTERED INDEX IX_bookings_user_status ON dbo.bookings(booked_by_user_id, booking_status, booking_date DESC) 
     INCLUDE (total_amount, payment_status) WHERE is_deleted = 0;
 
 CREATE NONCLUSTERED INDEX IX_bookings_customer ON dbo.bookings(customer_id, booking_date DESC) WHERE is_deleted = 0;
@@ -653,7 +635,7 @@ CREATE NONCLUSTERED INDEX IX_bookings_payment_status ON dbo.bookings(payment_sta
 
 -- Columnstore Index for Analytics
 CREATE NONCLUSTERED COLUMNSTORE INDEX NCCI_bookings_analytics 
-    ON dbo.bookings(booking_date, tenant_id, booking_type, booking_status, total_amount, commission_amount);
+    ON dbo.bookings(booking_date, booked_by_user_id, booking_type, booking_status, total_amount, commission_amount);
 ```
 #### 3.3.2 Table: booking_travelers
 Purpose: Link travelers to bookings (many-to-many)
@@ -921,9 +903,6 @@ CREATE TABLE dbo.payments (
     payment_id BIGINT IDENTITY(1,1) NOT NULL,
     payment_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
     
-    -- Multi-Tenant
-    tenant_id BIGINT NOT NULL,
-    
     -- Booking Reference
     booking_id BIGINT NOT NULL,
     
@@ -980,13 +959,12 @@ CREATE TABLE dbo.payments (
     CONSTRAINT PK_payments PRIMARY KEY CLUSTERED (payment_id),
     CONSTRAINT UQ_payments_uuid UNIQUE (payment_uuid),
     CONSTRAINT UQ_payments_reference UNIQUE (payment_reference),
-    CONSTRAINT FK_payments_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id),
     CONSTRAINT FK_payments_booking FOREIGN KEY (booking_id) REFERENCES dbo.bookings(booking_id),
     CONSTRAINT CK_payments_status CHECK (payment_status IN ('INITIATED', 'PENDING', 'AUTHORIZED', 'CAPTURED', 'SUCCESS', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'CANCELLED'))
 );
 
 CREATE NONCLUSTERED INDEX IX_payments_booking ON dbo.payments(booking_id);
-CREATE NONCLUSTERED INDEX IX_payments_tenant_status ON dbo.payments(tenant_id, payment_status, created_at DESC);
+CREATE NONCLUSTERED INDEX IX_payments_status ON dbo.payments(payment_status, created_at DESC);
 CREATE NONCLUSTERED INDEX IX_payments_transaction ON dbo.payments(transaction_id) WHERE transaction_id IS NOT NULL;
 CREATE NONCLUSTERED INDEX IX_payments_reconciliation ON dbo.payments(is_reconciled, settlement_date) WHERE payment_status = 'SUCCESS';
 ```
@@ -1058,10 +1036,9 @@ CREATE TABLE dbo.commissions (
     commission_id BIGINT IDENTITY(1,1) NOT NULL,
     commission_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
     
-    -- Tenant & Booking
-    tenant_id BIGINT NOT NULL,
+    -- Agent & Booking
+    user_id BIGINT NOT NULL, -- Specific agent/user who earned this
     booking_id BIGINT NOT NULL,
-    user_id BIGINT, -- Specific agent/user who earned this
     
     -- Commission Details
     booking_type VARCHAR(50) NOT NULL, -- 'FLIGHT', 'HOTEL', 'BUS'
@@ -1096,14 +1073,12 @@ CREATE TABLE dbo.commissions (
     
     CONSTRAINT PK_commissions PRIMARY KEY CLUSTERED (commission_id),
     CONSTRAINT UQ_commissions_uuid UNIQUE (commission_uuid),
-    CONSTRAINT FK_commissions_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id),
     CONSTRAINT FK_commissions_booking FOREIGN KEY (booking_id) REFERENCES dbo.bookings(booking_id),
     CONSTRAINT FK_commissions_user FOREIGN KEY (user_id) REFERENCES dbo.users(user_id),
     CONSTRAINT CK_commissions_status CHECK (commission_status IN ('PENDING', 'APPROVED', 'PAID', 'CANCELLED', 'REVERSED'))
 );
 
-CREATE NONCLUSTERED INDEX IX_commissions_tenant ON dbo.commissions(tenant_id, commission_status, created_at DESC);
-CREATE NONCLUSTERED INDEX IX_commissions_user ON dbo.commissions(user_id, commission_status) WHERE user_id IS NOT NULL;
+CREATE NONCLUSTERED INDEX IX_commissions_user ON dbo.commissions(user_id, commission_status, created_at DESC);
 CREATE NONCLUSTERED INDEX IX_commissions_settlement ON dbo.commissions(settlement_date, commission_status) WHERE commission_status = 'APPROVED';
 CREATE NONCLUSTERED INDEX IX_commissions_booking ON dbo.commissions(booking_id);
 ```
@@ -1120,9 +1095,6 @@ CREATE NONCLUSTERED INDEX IX_commissions_booking ON dbo.commissions(booking_id);
 CREATE TABLE dbo.invoices (
     invoice_id BIGINT IDENTITY(1,1) NOT NULL,
     invoice_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
-    
-    -- Multi-Tenant
-    tenant_id BIGINT NOT NULL,
     
     -- References
     booking_id BIGINT NOT NULL,
@@ -1216,7 +1188,6 @@ CREATE TABLE dbo.invoices (
     CONSTRAINT PK_invoices PRIMARY KEY CLUSTERED (invoice_id),
     CONSTRAINT UQ_invoices_uuid UNIQUE (invoice_uuid),
     CONSTRAINT UQ_invoices_number UNIQUE (invoice_number),
-    CONSTRAINT FK_invoices_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id),
     CONSTRAINT FK_invoices_booking FOREIGN KEY (booking_id) REFERENCES dbo.bookings(booking_id),
     CONSTRAINT FK_invoices_customer FOREIGN KEY (customer_id) REFERENCES dbo.customers(customer_id),
     CONSTRAINT FK_invoices_original FOREIGN KEY (original_invoice_id) REFERENCES dbo.invoices(invoice_id),
@@ -1224,11 +1195,10 @@ CREATE TABLE dbo.invoices (
     CONSTRAINT CK_invoices_payment_status CHECK (payment_status IN ('UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED'))
 );
 
-CREATE NONCLUSTERED INDEX IX_invoices_tenant ON dbo.invoices(tenant_id, invoice_date DESC) WHERE is_deleted = 0;
 CREATE NONCLUSTERED INDEX IX_invoices_booking ON dbo.invoices(booking_id);
 CREATE NONCLUSTERED INDEX IX_invoices_customer ON dbo.invoices(customer_id, invoice_date DESC);
 CREATE NONCLUSTERED INDEX IX_invoices_payment_status ON dbo.invoices(payment_status, due_date) WHERE payment_status IN ('UNPAID', 'PARTIALLY_PAID', 'OVERDUE');
-CREATE NONCLUSTERED INDEX IX_invoices_financial_year ON dbo.invoices(financial_year, tenant_id) WHERE is_deleted = 0;
+CREATE NONCLUSTERED INDEX IX_invoices_financial_year ON dbo.invoices(financial_year) WHERE is_deleted = 0;
 
 
 ```
@@ -1476,9 +1446,7 @@ CREATE TABLE dbo.notifications (
     notification_id BIGINT IDENTITY(1,1) NOT NULL,
     notification_uuid UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
     
-    -- Multi-Tenant
-    tenant_id BIGINT NOT NULL,
-    
+
     -- Recipient
     user_id BIGINT, -- For agents/staff
     customer_id BIGINT, -- For customers
@@ -1524,7 +1492,6 @@ CREATE TABLE dbo.notifications (
     
     CONSTRAINT PK_notifications PRIMARY KEY CLUSTERED (notification_id),
     CONSTRAINT UQ_notifications_uuid UNIQUE (notification_uuid),
-    CONSTRAINT FK_notifications_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id),
     CONSTRAINT FK_notifications_user FOREIGN KEY (user_id) REFERENCES dbo.users(user_id),
     CONSTRAINT FK_notifications_customer FOREIGN KEY (customer_id) REFERENCES dbo.customers(customer_id),
     CONSTRAINT CK_notifications_recipient CHECK (user_id IS NOT NULL OR customer_id IS NOT NULL)
@@ -1532,7 +1499,6 @@ CREATE TABLE dbo.notifications (
 
 CREATE NONCLUSTERED INDEX IX_notifications_user ON dbo.notifications(user_id, is_read, created_at DESC) WHERE user_id IS NOT NULL;
 CREATE NONCLUSTERED INDEX IX_notifications_customer ON dbo.notifications(customer_id, is_read, created_at DESC) WHERE customer_id IS NOT NULL;
-CREATE NONCLUSTERED INDEX IX_notifications_tenant ON dbo.notifications(tenant_id, created_at DESC);
 ```
 
 #### 3.10.2 Table: email_logs
@@ -1542,9 +1508,7 @@ Purpose: Track all email communications
 CREATE TABLE dbo.email_logs (
     email_log_id BIGINT IDENTITY(1,1) NOT NULL,
     
-    -- Multi-Tenant
-    tenant_id BIGINT NOT NULL,
-    
+
     -- Recipient
     to_email NVARCHAR(255) NOT NULL,
     cc_emails NVARCHAR(MAX), -- JSON array
@@ -1594,14 +1558,12 @@ CREATE TABLE dbo.email_logs (
     -- Audit
     created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     
-    CONSTRAINT PK_email_logs PRIMARY KEY CLUSTERED (email_log_id),
-    CONSTRAINT FK_email_logs_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id)
+    CONSTRAINT PK_email_logs PRIMARY KEY CLUSTERED (email_log_id)
 );
 
 CREATE NONCLUSTERED INDEX IX_email_logs_to_email ON dbo.email_logs(to_email, created_at DESC);
 CREATE NONCLUSTERED INDEX IX_email_logs_status ON dbo.email_logs(email_status, created_at DESC);
 CREATE NONCLUSTERED INDEX IX_email_logs_reference ON dbo.email_logs(reference_type, reference_id);
-CREATE NONCLUSTERED INDEX IX_email_logs_tenant ON dbo.email_logs(tenant_id, created_at DESC);
 ```
 
 #### 3.10.3 Table: sms_logs
@@ -1611,9 +1573,7 @@ Purpose: Track all SMS communications
 CREATE TABLE dbo.sms_logs (
     sms_log_id BIGINT IDENTITY(1,1) NOT NULL,
     
-    -- Multi-Tenant
-    tenant_id BIGINT NOT NULL,
-    
+
     -- Recipient
     phone_number VARCHAR(20) NOT NULL,
     country_code VARCHAR(5) NOT NULL DEFAULT '+91',
@@ -1657,13 +1617,11 @@ CREATE TABLE dbo.sms_logs (
     -- Audit
     created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     
-    CONSTRAINT PK_sms_logs PRIMARY KEY CLUSTERED (sms_log_id),
-    CONSTRAINT FK_sms_logs_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id)
+    CONSTRAINT PK_sms_logs PRIMARY KEY CLUSTERED (sms_log_id)
 );
 
 CREATE NONCLUSTERED INDEX IX_sms_logs_phone ON dbo.sms_logs(phone_number, created_at DESC);
 CREATE NONCLUSTERED INDEX IX_sms_logs_status ON dbo.sms_logs(sms_status, created_at DESC);
-CREATE NONCLUSTERED INDEX IX_sms_logs_tenant ON dbo.sms_logs(tenant_id, created_at DESC);
 CREATE NONCLUSTERED INDEX IX_sms_logs_reference ON dbo.sms_logs(reference_type, reference_id);
 ```
 
@@ -1679,9 +1637,7 @@ GO
 CREATE TABLE audit.activity_logs (
     activity_log_id BIGINT IDENTITY(1,1) NOT NULL,
     
-    -- Multi-Tenant
-    tenant_id BIGINT,
-    
+
     -- Actor
     actor_type VARCHAR(50) NOT NULL, -- 'USER', 'CUSTOMER', 'SYSTEM', 'API'
     actor_id BIGINT, -- user_id or customer_id
@@ -1725,7 +1681,6 @@ CREATE TABLE audit.activity_logs (
 );
 
 -- Partitioning by month recommended for this table
-CREATE NONCLUSTERED INDEX IX_activity_logs_tenant ON audit.activity_logs(tenant_id, created_at DESC);
 CREATE NONCLUSTERED INDEX IX_activity_logs_actor ON audit.activity_logs(actor_type, actor_id, created_at DESC);
 CREATE NONCLUSTERED INDEX IX_activity_logs_entity ON audit.activity_logs(entity_type, entity_id);
 CREATE NONCLUSTERED INDEX IX_activity_logs_action ON audit.activity_logs(action, created_at DESC);
@@ -1784,7 +1739,6 @@ CREATE TABLE sec.user_sessions (
     -- User
     user_id BIGINT, -- NULL for customer sessions
     customer_id BIGINT,
-    tenant_id BIGINT,
     
     -- Session Details
     session_token VARCHAR(500) NOT NULL, -- Hashed JWT or session token
@@ -1827,8 +1781,8 @@ Purpose: Manage API keys for tenant integrations
 CREATE TABLE sec.api_keys (
     api_key_id BIGINT IDENTITY(1,1) NOT NULL,
     
-    -- Tenant
-    tenant_id BIGINT NOT NULL,
+    -- User (Agent)
+    user_id BIGINT NOT NULL,
     
     -- Key Details
     key_name NVARCHAR(100) NOT NULL,
@@ -1864,10 +1818,10 @@ CREATE TABLE sec.api_keys (
     
     CONSTRAINT PK_api_keys PRIMARY KEY CLUSTERED (api_key_id),
     CONSTRAINT UQ_api_keys_key UNIQUE (api_key),
-    CONSTRAINT FK_api_keys_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id)
+    CONSTRAINT FK_api_keys_user FOREIGN KEY (user_id) REFERENCES dbo.users(user_id)
 );
 
-CREATE NONCLUSTERED INDEX IX_api_keys_tenant ON sec.api_keys(tenant_id, is_active);
+CREATE NONCLUSTERED INDEX IX_api_keys_user ON sec.api_keys(user_id, is_active);
 ```
 
 ### 3.12 ANALYTICS & REPORTING SCHEMA
@@ -1884,7 +1838,6 @@ CREATE TABLE analytics.daily_booking_summary (
     
     -- Dimensions
     summary_date DATE NOT NULL,
-    tenant_id BIGINT NOT NULL,
     booking_type VARCHAR(50) NOT NULL,
     
     -- Route (for flights)
@@ -1920,15 +1873,14 @@ CREATE TABLE analytics.daily_booking_summary (
     -- Timestamps
     calculated_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     
-    CONSTRAINT PK_daily_booking_summary PRIMARY KEY CLUSTERED (summary_date, tenant_id, booking_type, summary_id)
+    CONSTRAINT PK_daily_booking_summary PRIMARY KEY CLUSTERED (summary_date, booking_type, summary_id)
 );
 
-CREATE NONCLUSTERED INDEX IX_daily_summary_tenant_date ON analytics.daily_booking_summary(tenant_id, summary_date DESC);
 CREATE NONCLUSTERED INDEX IX_daily_summary_route ON analytics.daily_booking_summary(origin_code, destination_code, summary_date DESC);
 
 -- Columnstore for analytics queries
 CREATE NONCLUSTERED COLUMNSTORE INDEX NCCI_daily_summary_analytics
-    ON analytics.daily_booking_summary(summary_date, tenant_id, booking_type, total_revenue, total_commission);
+    ON analytics.daily_booking_summary(summary_date, booking_type, total_revenue, total_commission);
 ```
 
 #### 3.12.2 Table: analytics.agent_performance
@@ -1944,7 +1896,6 @@ CREATE TABLE analytics.agent_performance (
     period_end_date DATE NOT NULL,
     
     -- Agent
-    tenant_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     
     -- Booking Metrics
@@ -1968,56 +1919,21 @@ CREATE TABLE analytics.agent_performance (
     customer_satisfaction_score DECIMAL(3,2), -- 0-5 rating
     
     -- Rankings
-    rank_in_tenant INT,
     rank_overall INT,
     
     -- Timestamps
     calculated_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     
     CONSTRAINT PK_agent_performance PRIMARY KEY CLUSTERED (performance_id),
-    CONSTRAINT FK_agent_performance_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id),
     CONSTRAINT FK_agent_performance_user FOREIGN KEY (user_id) REFERENCES dbo.users(user_id)
 );
 
 CREATE NONCLUSTERED INDEX IX_agent_performance_user ON analytics.agent_performance(user_id, period_start_date DESC);
-CREATE NONCLUSTERED INDEX IX_agent_performance_tenant ON analytics.agent_performance(tenant_id, period_start_date DESC);
 ```
 
 ### 3.13 CONFIGURATION & SETTINGS
 
-#### 3.13.1 Table: tenant_settings
-Purpose: Tenant-specific configuration
 
-```sql
-CREATE TABLE dbo.tenant_settings (
-    setting_id BIGINT IDENTITY(1,1) NOT NULL,
-    tenant_id BIGINT NOT NULL,
-    
-    -- Setting
-    setting_key VARCHAR(100) NOT NULL, 
-    /* Examples:
-        'commission.default_percentage', 'booking.auto_confirm',
-        'payment.gateway', 'email.from_address', 'sms.enabled'
-    */
-    setting_value NVARCHAR(MAX) NOT NULL, -- Can be JSON for complex values
-    setting_type VARCHAR(50) NOT NULL, -- 'STRING', 'NUMBER', 'BOOLEAN', 'JSON'
-    
-    -- Metadata
-    description NVARCHAR(500),
-    is_system BIT DEFAULT 0, -- System settings cannot be changed by tenant
-    
-    -- Audit
-    created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    updated_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    updated_by BIGINT,
-    
-    CONSTRAINT PK_tenant_settings PRIMARY KEY CLUSTERED (setting_id),
-    CONSTRAINT UQ_tenant_settings UNIQUE (tenant_id, setting_key),
-    CONSTRAINT FK_tenant_settings_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id)
-);
-
-CREATE NONCLUSTERED INDEX IX_tenant_settings_tenant ON dbo.tenant_settings(tenant_id);
-```
 
 #### 3.13.2 Table: system_settings
 Purpose: Global system configuration
@@ -2053,8 +1969,8 @@ Purpose: Configure commission structures
 CREATE TABLE dbo.commission_rules (
     rule_id BIGINT IDENTITY(1,1) NOT NULL,
     
-    -- Tenant (NULL for global rules)
-    tenant_id BIGINT,
+    -- User (NULL for global rules)
+    user_id BIGINT,
     
     -- Rule Details
     rule_name NVARCHAR(100) NOT NULL,
@@ -2098,10 +2014,10 @@ CREATE TABLE dbo.commission_rules (
     created_by BIGINT,
     
     CONSTRAINT PK_commission_rules PRIMARY KEY CLUSTERED (rule_id),
-    CONSTRAINT FK_commission_rules_tenant FOREIGN KEY (tenant_id) REFERENCES dbo.tenants(tenant_id)
+    CONSTRAINT FK_commission_rules_user FOREIGN KEY (user_id) REFERENCES dbo.users(user_id)
 );
 
-CREATE NONCLUSTERED INDEX IX_commission_rules_tenant ON dbo.commission_rules(tenant_id, is_active, priority DESC);
+CREATE NONCLUSTERED INDEX IX_commission_rules_user ON dbo.commission_rules(user_id, is_active, priority DESC);
 CREATE NONCLUSTERED INDEX IX_commission_rules_validity ON dbo.commission_rules(valid_from, valid_until, is_active);
 
 ```
@@ -2130,13 +2046,13 @@ CREATE NONCLUSTERED INDEX IX_bookings_customer_search
 
 -- 2. Agent Dashboard - Today's Bookings
 CREATE NONCLUSTERED INDEX IX_bookings_agent_dashboard
-    ON dbo.bookings(tenant_id, booking_date)
+    ON dbo.bookings(booked_by_user_id, booking_date)
     INCLUDE (booking_reference, total_amount, commission_amount, booking_status)
     WHERE is_deleted = 0 AND booking_date >= CAST(GETUTCDATE() AS DATE);
 
 -- 3. Pending Payments
 CREATE NONCLUSTERED INDEX IX_bookings_pending_payment
-    ON dbo.bookings(tenant_id, expires_at)
+    ON dbo.bookings(booked_by_user_id, expires_at)
     INCLUDE (booking_reference, customer_id, total_amount)
     WHERE payment_status IN ('PENDING', 'PARTIALLY_PAID') AND is_deleted = 0;
 
@@ -2148,7 +2064,7 @@ CREATE NONCLUSTERED INDEX IX_flight_bookings_upcoming
 
 -- 5. Commission Settlement
 CREATE NONCLUSTERED INDEX IX_commissions_settlement_pending
-    ON dbo.commissions(tenant_id, settlement_date)
+    ON dbo.commissions(user_id, settlement_date)
     INCLUDE (commission_amount, net_commission, booking_id)
     WHERE commission_status = 'APPROVED' AND settlement_date IS NOT NULL;
 ```
@@ -2238,39 +2154,39 @@ END;
 ```sql
 -- Enable Row-Level Security on critical tables
 
--- 1. Create Security Policy for Tenants
+-- 1. Create Security Policy for Agents
 CREATE SCHEMA security;
 GO
 
--- Function to get current tenant_id from session context
-CREATE FUNCTION security.fn_TenantAccessPredicate(@tenant_id BIGINT)
+-- Function to get current user_id from session context
+CREATE FUNCTION security.fn_UserAccessPredicate(@user_id BIGINT)
 RETURNS TABLE
 WITH SCHEMABINDING
 AS
 RETURN 
     SELECT 1 AS accessResult
     WHERE 
-        @tenant_id = CAST(SESSION_CONTEXT(N'tenant_id') AS BIGINT)
+        @user_id = CAST(SESSION_CONTEXT(N'user_id') AS BIGINT)
         OR IS_MEMBER('db_owner') = 1  -- Admins can see all
         OR IS_MEMBER('SuperAdmin') = 1;
 GO
 
 -- Apply to bookings table
-CREATE SECURITY POLICY security.TenantIsolationPolicy
-ADD FILTER PREDICATE security.fn_TenantAccessPredicate(tenant_id)
+CREATE SECURITY POLICY security.UserIsolationPolicy
+ADD FILTER PREDICATE security.fn_UserAccessPredicate(booked_by_user_id)
 ON dbo.bookings,
-ADD FILTER PREDICATE security.fn_TenantAccessPredicate(tenant_id)
+ADD FILTER PREDICATE security.fn_UserAccessPredicate(referred_by_user_id)
 ON dbo.customers,
-ADD FILTER PREDICATE security.fn_TenantAccessPredicate(tenant_id)
-ON dbo.payments,
-ADD FILTER PREDICATE security.fn_TenantAccessPredicate(tenant_id)
+ADD FILTER PREDICATE security.fn_UserAccessPredicate(user_id)
+ON dbo.wallets,
+ADD FILTER PREDICATE security.fn_UserAccessPredicate(user_id)
 ON dbo.commissions
 WITH (STATE = ON);
 GO
 
 -- Usage in application:
--- Before executing tenant-specific queries:
--- EXEC sp_set_session_context @key = N'tenant_id', @value = @tenantId;
+-- Before executing user-specific queries:
+-- EXEC sp_set_session_context @key = N'user_id', @value = @userId;
 ```
 
 ### 6.2 Encryption Strategy
@@ -2363,12 +2279,12 @@ GO
 CREATE ROLE SuperAdmin;
 GRANT CONTROL ON DATABASE::BookingPlatformDB TO SuperAdmin;
 
--- 2. Tenant Admin Role
-CREATE ROLE TenantAdmin;
-GRANT SELECT, INSERT, UPDATE ON SCHEMA::dbo TO TenantAdmin;
-GRANT SELECT ON SCHEMA::analytics TO TenantAdmin;
-DENY DELETE ON dbo.bookings TO TenantAdmin;  -- Soft delete only
-DENY DELETE ON dbo.customers TO TenantAdmin;
+-- 2. Admin Role
+CREATE ROLE Admin;
+GRANT SELECT, INSERT, UPDATE ON SCHEMA::dbo TO Admin;
+GRANT SELECT ON SCHEMA::analytics TO Admin;
+DENY DELETE ON dbo.bookings TO Admin;  -- Soft delete only
+DENY DELETE ON dbo.customers TO Admin;
 
 -- 3. Agent Role
 CREATE ROLE Agent;
@@ -2488,11 +2404,10 @@ BEGIN
     SET NOCOUNT ON;
     
     INSERT INTO audit.activity_logs (
-        tenant_id, actor_type, actor_id, action, 
+        actor_type, actor_id, action, 
         description, ip_address, user_agent, status, created_at
     )
     SELECT 
-        i.tenant_id,
         CASE WHEN i.user_id IS NOT NULL THEN 'USER' ELSE 'CUSTOMER' END,
         ISNULL(i.user_id, i.customer_id),
         'USER_LOGIN',
