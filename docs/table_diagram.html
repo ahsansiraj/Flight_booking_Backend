@@ -249,105 +249,133 @@
                 <text x="1500" y="1500" class="schema-label">AUDIT</text>
                 <text x="50" y="2300" class="schema-label">ANALYTICS</text>
 
-                <!-- TENANTS Table -->
-                <g id="tenants">
-                    <rect x="50" y="60" width="280" height="240" class="table-box"/>
+                <!-- WALLETS Table -->
+                <g id="wallets">
+                    <rect x="50" y="60" width="280" height="180" class="table-box"/>
                     <rect x="50" y="60" width="280" height="35" class="table-header"/>
-                    <text x="160" y="82" class="table-title">TENANTS</text>
+                    <text x="160" y="82" class="table-title">WALLETS</text>
                     
-                    <text x="60" y="110" class="table-field pk">PK tenant_id</text>
-                    <text x="60" y="130" class="table-field">   tenant_uuid</text>
-                    <text x="60" y="150" class="table-field">   tenant_name</text>
-                    <text x="60" y="170" class="table-field">   tenant_code</text>
-                    <text x="60" y="190" class="table-field">   email</text>
-                    <text x="60" y="210" class="table-field">   status</text>
-                    <text x="60" y="230" class="table-field">   subscription_plan</text>
-                    <text x="60" y="250" class="table-field">   commission_model</text>
-                    <text x="60" y="270" class="table-field">   created_at</text>
+                    <text x="60" y="110" class="table-field pk">PK wallet_id</text>
+                    <text x="60" y="130" class="table-field fk">FK user_id</text>
+                    <text x="60" y="150" class="table-field">   balance</text>
+                    <text x="60" y="170" class="table-field">   commission_balance</text>
+                    <text x="60" y="190" class="table-field">   status</text>
+                    <text x="60" y="210" class="table-field">   created_at</text>
+                    <text x="60" y="230" class="table-field">   updated_at</text>
                 </g>
 
                 <!-- USERS Table -->
                 <g id="users">
-                    <rect x="450" y="60" width="280" height="280" class="table-box"/>
+                    <rect x="450" y="60" width="280" height="260" class="table-box"/>
                     <rect x="450" y="60" width="280" height="35" class="table-header"/>
                     <text x="560" y="82" class="table-title">USERS</text>
                     
                     <text x="460" y="110" class="table-field pk">PK user_id</text>
                     <text x="460" y="130" class="table-field">   user_uuid</text>
-                    <text x="460" y="150" class="table-field fk">FK tenant_id</text>
-                    <text x="460" y="170" class="table-field">   username</text>
-                    <text x="460" y="190" class="table-field">   email</text>
-                    <text x="460" y="210" class="table-field">   password_hash</text>
-                    <text x="460" y="230" class="table-field">   first_name</text>
-                    <text x="460" y="250" class="table-field">   last_name</text>
-                    <text x="460" y="270" class="table-field">   user_type</text>
-                    <text x="460" y="290" class="table-field">   status</text>
-                    <text x="460" y="310" class="table-field">   last_login_at</text>
-                    <text x="460" y="330" class="table-field">   created_at</text>
+                    <text x="460" y="150" class="table-field">   username</text>
+                    <text x="460" y="170" class="table-field">   email</text>
+                    <text x="460" y="190" class="table-field">   password_hash</text>
+                    <text x="460" y="210" class="table-field">   first_name</text>
+                    <text x="460" y="230" class="table-field">   last_name</text>
+                    <text x="460" y="250" class="table-field">   user_type</text>
+                    <text x="460" y="270" class="table-field">   status</text>
+                    <text x="460" y="290" class="table-field">   last_login_at</text>
+                    <text x="460" y="310" class="table-field">   created_at</text>
+                </g>
+                
+                <!-- WALLET_TRANSACTIONS Table -->
+                <g id="wallet_transactions">
+                    <rect x="850" y="60" width="300" height="240" class="table-box"/>
+                    <rect x="850" y="60" width="300" height="35" class="table-header"/>
+                    <text x="920" y="82" class="table-title">WALLET_TRANSACTIONS</text>
+                    
+                    <text x="860" y="110" class="table-field pk">PK transaction_id</text>
+                    <text x="860" y="130" class="table-field fk">FK wallet_id</text>
+                    <text x="860" y="150" class="table-field">   transaction_type</text>
+                    <text x="860" y="170" class="table-field">   amount</text>
+                    <text x="860" y="190" class="table-field">   balance_before</text>
+                    <text x="860" y="210" class="table-field">   balance_after</text>
+                    <text x="860" y="230" class="table-field">   transaction_status</text>
+                    <text x="860" y="250" class="table-field">   reference_type</text>
+                    <text x="860" y="270" class="table-field">   reference_id</text>
+                    <text x="860" y="290" class="table-field">   created_at</text>
+                </g>
+
+                <!-- PAYOUTS Table -->
+                <g id="payouts">
+                    <rect x="1200" y="60" width="280" height="200" class="table-box"/>
+                    <rect x="1200" y="60" width="280" height="35" class="table-header"/>
+                    <text x="1300" y="82" class="table-title">PAYOUTS</text>
+                    
+                    <text x="1210" y="110" class="table-field pk">PK payout_id</text>
+                    <text x="1210" y="130" class="table-field fk">FK user_id</text>
+                    <text x="1210" y="150" class="table-field">   amount</text>
+                    <text x="1210" y="170" class="table-field">   status</text>
+                    <text x="1210" y="190" class="table-field">   payout_method</text>
+                    <text x="1210" y="210" class="table-field">   bank_details</text>
+                    <text x="1210" y="230" class="table-field">   processed_by</text>
+                    <text x="1210" y="250" class="table-field">   created_at</text>
                 </g>
 
                 <!-- CUSTOMERS Table -->
                 <g id="customers">
-                    <rect x="50" y="380" width="280" height="300" class="table-box"/>
+                    <rect x="50" y="380" width="280" height="280" class="table-box"/>
                     <rect x="50" y="380" width="280" height="35" class="table-header"/>
                     <text x="150" y="402" class="table-title">CUSTOMERS</text>
                     
                     <text x="60" y="430" class="table-field pk">PK customer_id</text>
                     <text x="60" y="450" class="table-field">   customer_uuid</text>
-                    <text x="60" y="470" class="table-field fk">FK tenant_id</text>
-                    <text x="60" y="490" class="table-field fk">FK referred_by_user_id</text>
-                    <text x="60" y="510" class="table-field">   email</text>
-                    <text x="60" y="530" class="table-field">   phone</text>
-                    <text x="60" y="550" class="table-field">   first_name</text>
-                    <text x="60" y="570" class="table-field">   last_name</text>
-                    <text x="60" y="590" class="table-field">   nationality</text>
-                    <text x="60" y="610" class="table-field">   loyalty_tier</text>
-                    <text x="60" y="630" class="table-field">   total_bookings</text>
-                    <text x="60" y="650" class="table-field">   registered_at</text>
-                    <text x="60" y="670" class="table-field">   created_at</text>
+                    <text x="60" y="470" class="table-field fk">FK referred_by_user_id</text>
+                    <text x="60" y="490" class="table-field">   email</text>
+                    <text x="60" y="510" class="table-field">   phone</text>
+                    <text x="60" y="530" class="table-field">   first_name</text>
+                    <text x="60" y="550" class="table-field">   last_name</text>
+                    <text x="60" y="570" class="table-field">   nationality</text>
+                    <text x="60" y="590" class="table-field">   loyalty_tier</text>
+                    <text x="60" y="610" class="table-field">   total_bookings</text>
+                    <text x="60" y="630" class="table-field">   registered_at</text>
+                    <text x="60" y="650" class="table-field">   created_at</text>
                 </g>
 
                 <!-- TRAVELERS Table -->
                 <g id="travelers">
-                    <rect x="450" y="420" width="280" height="220" class="table-box"/>
+                    <rect x="450" y="420" width="280" height="200" class="table-box"/>
                     <rect x="450" y="420" width="280" height="35" class="table-header"/>
                     <text x="550" y="442" class="table-title">TRAVELERS</text>
                     
                     <text x="460" y="470" class="table-field pk">PK traveler_id</text>
                     <text x="460" y="490" class="table-field">   traveler_uuid</text>
                     <text x="460" y="510" class="table-field fk">FK customer_id</text>
-                    <text x="460" y="530" class="table-field fk">FK tenant_id</text>
-                    <text x="460" y="550" class="table-field">   first_name</text>
-                    <text x="460" y="570" class="table-field">   last_name</text>
-                    <text x="460" y="590" class="table-field">   document_type</text>
-                    <text x="460" y="610" class="table-field">   document_number</text>
-                    <text x="460" y="630" class="table-field">   created_at</text>
+                    <text x="460" y="530" class="table-field">   first_name</text>
+                    <text x="460" y="550" class="table-field">   last_name</text>
+                    <text x="460" y="570" class="table-field">   document_type</text>
+                    <text x="460" y="590" class="table-field">   document_number</text>
+                    <text x="460" y="610" class="table-field">   created_at</text>
                 </g>
 
                 <!-- BOOKINGS Table (Central) -->
                 <g id="bookings">
-                    <rect x="850" y="700" width="320" height="400" class="table-box"/>
+                    <rect x="850" y="700" width="320" height="380" class="table-box"/>
                     <rect x="850" y="700" width="320" height="35" class="table-header" style="fill: #e53e3e;"/>
                     <text x="950" y="722" class="table-title">BOOKINGS (Core)</text>
                     
                     <text x="860" y="750" class="table-field pk">PK booking_id</text>
                     <text x="860" y="770" class="table-field">   booking_uuid</text>
                     <text x="860" y="790" class="table-field">   booking_reference</text>
-                    <text x="860" y="810" class="table-field fk">FK tenant_id</text>
-                    <text x="860" y="830" class="table-field fk">FK customer_id</text>
-                    <text x="860" y="850" class="table-field fk">FK booked_by_user_id</text>
-                    <text x="860" y="870" class="table-field">   booking_type</text>
-                    <text x="860" y="890" class="table-field">   origin_code</text>
-                    <text x="860" y="910" class="table-field">   destination_code</text>
-                    <text x="860" y="930" class="table-field">   travel_start_date</text>
-                    <text x="860" y="950" class="table-field">   total_amount</text>
-                    <text x="860" y="970" class="table-field">   commission_amount</text>
-                    <text x="860" y="990" class="table-field">   payment_status</text>
-                    <text x="860" y="1010" class="table-field">   booking_status</text>
-                    <text x="860" y="1030" class="table-field">   pnr</text>
-                    <text x="860" y="1050" class="table-field">   booking_date</text>
-                    <text x="860" y="1070" class="table-field">   created_at</text>
-                    <text x="860" y="1090" class="table-field">   updated_at</text>
+                    <text x="860" y="810" class="table-field fk">FK customer_id</text>
+                    <text x="860" y="830" class="table-field fk">FK booked_by_user_id</text>
+                    <text x="860" y="850" class="table-field">   booking_type</text>
+                    <text x="860" y="870" class="table-field">   origin_code</text>
+                    <text x="860" y="890" class="table-field">   destination_code</text>
+                    <text x="860" y="910" class="table-field">   travel_start_date</text>
+                    <text x="860" y="930" class="table-field">   total_amount</text>
+                    <text x="860" y="950" class="table-field">   commission_amount</text>
+                    <text x="860" y="970" class="table-field">   payment_status</text>
+                    <text x="860" y="990" class="table-field">   booking_status</text>
+                    <text x="860" y="1010" class="table-field">   pnr</text>
+                    <text x="860" y="1030" class="table-field">   booking_date</text>
+                    <text x="860" y="1050" class="table-field">   created_at</text>
+                    <text x="860" y="1070" class="table-field">   updated_at</text>
                 </g>
 
                 <!-- FLIGHT_BOOKINGS Table -->

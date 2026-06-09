@@ -1,5 +1,5 @@
 # Product Requirements Document (PRD)
-## Multi-Tenant Booking Platform
+## B2B Agent Booking Platform
 
 ### Version: 1.0
 ### Date: January 2025
@@ -10,24 +10,25 @@
 ## 1. Executive Summary
 
 ### 1.1 Product Vision
-Build a scalable, multi-tenant booking platform supporting flights, hotels, and bus bookings for both domestic (Indian) and international customers with agent commission tracking.
+Build a single-tenant, scalable B2B integrated platform where the admin is the supreme controller and registered agents book flights, hotels, and bus services for customers. It includes a comprehensive wallet ledger system, automated agent commission tracking, and payout mechanisms.
 
 ### 1.2 Business Objectives
 - Handle 10,000+ concurrent users
-- Support multiple booking agents (multi-tenancy)
+- Support a large base of booking agents (B2B model)
 - Process 1000+ bookings per hour
 - 99.9% uptime SLA
 - Real-time inventory management
-- Commission tracking and settlement
+- Robust ledger-based Wallet system for agent recharge and booking deductions
+- Complete accounting proof for commission tracking and payout settlements
 
 ---
 
 ## 2. Stakeholders
 
 ### 2.1 Primary Users
-- **Customers (B2C)**: End users booking travel services
-- **Agents**: Travel agents managing bookings and earning commissions
-- **Admin**: Platform administrators
+- **Admin**: Platform owner and supreme controller managing the software, agent approvals, wallet recharges, and payouts.
+- **Agents (B2B)**: Registered travel agents who maintain a wallet balance to book tickets for their customers and earn commissions.
+- **Customers**: End passengers whose travel services are booked through agents.
 - **API Partners**: Third-party service providers
 
 ---
@@ -73,11 +74,16 @@ Build a scalable, multi-tenant booking platform supporting flights, hotels, and 
 ### 3.2 Agent Panel
 
 #### 3.2.1 Dashboard & Analytics
-- **FR-027**: Commission dashboard (daily, monthly, yearly)
-- **FR-028**: Booking analytics (volume, revenue)
-- **FR-029**: Customer acquisition metrics
-- **FR-030**: Revenue reports and graphs
+- **FR-027**: Wallet balance and Commission balance overview
+- **FR-028**: Wallet transaction ledger (recharges, booking deductions, payouts)
+- **FR-029**: Commission dashboard (daily, monthly, yearly)
+- **FR-030**: Booking analytics (volume, revenue)
 - **FR-031**: Top performing routes/services
+
+#### 3.2.2 Wallet & Payouts
+- **FR-031a**: Wallet recharge requests (topping up account balance)
+- **FR-031b**: Payout/withdrawal requests from commission balance
+- **FR-031c**: Download wallet ledger statements
 
 #### 3.2.2 Booking Management
 - **FR-032**: Create bookings on behalf of customers
@@ -93,19 +99,22 @@ Build a scalable, multi-tenant booking platform supporting flights, hotels, and 
 - **FR-040**: Communication tools (email, SMS)
 
 #### 3.2.4 Financial Management
-- **FR-041**: Commission settlement tracking
-- **FR-042**: Payment reconciliation
+- **FR-041**: Ledger transaction tracking (double-entry proof)
+- **FR-042**: Payment and recharge reconciliation
 - **FR-043**: Invoice generation
 - **FR-044**: Tax reports (GST compliance)
 
 ### 3.3 Admin Panel
 
-#### 3.3.1 Platform Management
-- **FR-045**: Agent onboarding and approval
-- **FR-046**: Agent commission configuration
-- **FR-047**: Service provider (API) management
-- **FR-048**: Platform configuration and settings
-- **FR-049**: Fee and markup management
+#### 3.3.1 Platform & Agent Management
+- **FR-045**: Agent onboarding, approval, and suspension
+- **FR-046**: Manage agent wallet balances and approve recharge transactions
+- **FR-047**: Approve and process agent payout requests
+- **FR-048**: Configure global and agent-specific commission rules
+- **FR-049**: Service provider (API) management
+- **FR-049a**: Platform configuration and settings
+- **FR-049b**: Fee and markup management
+- **FR-049c**: Global wallet ledger and accounting oversight
 
 #### 3.3.2 Operations
 - **FR-050**: System-wide booking management
@@ -177,8 +186,8 @@ Build a scalable, multi-tenant booking platform supporting flights, hotels, and 
 
 ### 5.1 Technology Stack
 - **Backend**: Node.js with Express.js
-- **Database**: Microsoft SQL Server
-- **ORM**: Sequelize
+- **Database**: MS SQL Server (replacing MySQL references)
+- **ORM**: Sequelize (configured for MS SQL Server)
 - **Caching**: Redis
 - **Message Queue**: RabbitMQ/Bull
 - **Container**: Docker
@@ -205,16 +214,16 @@ Build a scalable, multi-tenant booking platform supporting flights, hotels, and 
 - **US-005**: As a customer, I want to save my frequent travelers
 
 ### 6.2 Agent Stories
-- **US-006**: As an agent, I want to view my total commission earned
-- **US-007**: As an agent, I want to see all customers registered through me
-- **US-008**: As an agent, I want to create bookings for corporate clients
-- **US-009**: As an agent, I want to track my monthly performance
+- **US-006**: As an agent, I want to recharge my wallet to maintain a booking balance
+- **US-007**: As an agent, I want ticket costs automatically deducted from my wallet
+- **US-008**: As an agent, I want to track my wallet ledger for complete accounting proof
+- **US-009**: As an agent, I want to view my total commission earned and request payouts
 
 ### 6.3 Admin Stories
-- **US-010**: As an admin, I want to onboard new agents
-- **US-011**: As an admin, I want to configure commission structures
-- **US-012**: As an admin, I want to monitor platform health
-- **US-013**: As an admin, I want to generate financial reports
+- **US-010**: As an admin, I want to be the supreme leader with full control over the platform
+- **US-011**: As an admin, I want to approve agent wallet recharges and payout requests
+- **US-012**: As an admin, I want to monitor the global wallet ledger and agent balances
+- **US-013**: As an admin, I want to configure commission structures and generate financial reports
 
 ---
 

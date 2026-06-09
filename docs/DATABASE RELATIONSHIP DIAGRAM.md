@@ -17,39 +17,18 @@
 
 ---
 
-## CORE MULTI-TENANCY & IDENTITY LAYER
+## CORE B2B & IDENTITY LAYER
 ```text
 ═══════════════════════════════════════════════════════════════════════════════
 
-┌─────────────────────────────────────────┐
-│         TENANTS (AGENTS/ORGS)           │
-├─────────────────────────────────────────┤
-│ PK  tenant_id (BIGINT)                  │
-│     tenant_uuid (UNIQUEIDENTIFIER)      │
-│     tenant_name                         │
-│     tenant_code (UNIQUE)                │
-│     email (UNIQUE)                      │
-│     phone                               │
-│     status                              │
-│     subscription_plan                   │
-│     commission_model                    │
-│     created_at                          │
-└─────────────────────────────────────────┘
-         │
-         │ [1:N]
-         │
-         ├─────────────────────────────────────────────────────┐
-         │                                                     │
-         ▼                                                     ▼
-┌─────────────────────────┐                    ┌──────────────────────────┐
-│        USERS            │                    │   TENANT_SETTINGS        │
-├─────────────────────────┤                    ├──────────────────────────┤
-│ PK  user_id            │                    │ PK  setting_id          │
-│     user_uuid          │                    │ FK  tenant_id           │
-│ FK  tenant_id ════════>│                    │     setting_key         │
-│     username (UNIQUE)  │                    │     setting_value       │
-│     email (UNIQUE)     │                    │     setting_type        │
-│     password_hash      │                    └──────────────────────────┘
+┌─────────────────────────┐
+│        USERS            │ (Admin, Agents, Staff)
+├─────────────────────────┤
+│ PK  user_id            │
+│     user_uuid          │
+│     username (UNIQUE)  │
+│     email (UNIQUE)     │
+│     password_hash      │
 │     first_name         │
 │     last_name          │
 │     user_type          │
@@ -57,39 +36,37 @@
 │     created_at         │
 └─────────────────────────┘
          │
-         │ [1:N]
+         │ [1:1]
          │
          ▼
 ┌─────────────────────────┐         ┌─────────────────────────┐
-│     USER_ROLES          │         │        ROLES            │
+│       WALLETS           │         │    WALLET_TRANSACTIONS  │
 ├─────────────────────────┤         ├─────────────────────────┤
-│ PK  user_role_id       │         │ PK  role_id            │
-│ FK  user_id ══════════>│         │     role_uuid          │
-│ FK  role_id ═══════════╬════════>│ FK  tenant_id          │
-│     assigned_at        │         │     role_name          │
-│     is_active          │         │     role_code          │
-└─────────────────────────┘         │     description        │
-                                    └─────────────────────────┘
-                                             │
-                                             │ [N:M]
-                                             ▼
-                                    ┌─────────────────────────┐
-                                    │   ROLE_PERMISSIONS      │
-                                    ├─────────────────────────┤
-                                    │ PK  role_permission_id │
-                                    │ FK  role_id ═══════════>│
-                                    │ FK  permission_id ═════>│
-                                    └─────────────────────────┘
-                                             │
-                                             ▼
-                                    ┌─────────────────────────┐
-                                    │     PERMISSIONS         │
-                                    ├─────────────────────────┤
-                                    │ PK  permission_id      │
-                                    │     permission_code    │
-                                    │     module             │
-                                    │     description        │
-                                    └─────────────────────────┘
+│ PK  wallet_id          │         │ PK  transaction_id     │
+│ FK  user_id ═══════════>│ [1:N]   │ FK  wallet_id ════════>│
+│     balance            │────┬───>│     transaction_type   │
+│     commission_balance │    │     │     amount             │
+│     status             │    │     │     balance_before     │
+│     created_at         │    │     │     balance_after      │
+└─────────────────────────┘    │     │     transaction_status │
+                               │     │     reference_type     │
+                               │     │     reference_id       │
+                               │     └─────────────────────────┘
+                               │
+                               │ [1:N]
+                               ▼
+                        ┌─────────────────────────┐
+                        │        PAYOUTS          │
+                        ├─────────────────────────┤
+                        │ PK  payout_id          │
+                        │ FK  user_id ═══════════>│
+                        │     amount             │
+                        │     status             │
+                        │     payout_method      │
+                        │     bank_details       │
+                        │     processed_by       │
+                        │     created_at         │
+                        └─────────────────────────┘
 
 ═══════════════════════════════════════════════════════════════════════════════
 ```
@@ -104,7 +81,6 @@
 ├─────────────────────────────────────────────────────────────┤
 │ PK  customer_id (BIGINT)                                   │
 │     customer_uuid (UNIQUEIDENTIFIER)                       │
-│ FK  tenant_id ═════════> TENANTS                           │
 │ FK  referred_by_user_id ═════> USERS                       │
 │     email (UNIQUE)                                         │
 │     phone (UNIQUE)                                         │
@@ -129,7 +105,6 @@
 ├──────────────────┤  │  (see below)   │  ├──────────────────────┤
 │ PK traveler_id  │  └────────────────┘  │ PK notification_id  │
 │ FK customer_id ═>│                     │ FK customer_id ═════>│
-│ FK tenant_id    │                     │ FK tenant_id        │
 │    first_name   │                     │    title, message   │
 │    last_name    │                     │    priority         │
 │    date_of_birth│                     │    is_read          │
@@ -154,7 +129,6 @@
                         │ PK  booking_id (BIGINT)                             │
                         │     booking_uuid (UNIQUEIDENTIFIER)                 │
                         │     booking_reference (UNIQUE) "BKG2025012345"      │
-                        │ FK  tenant_id ═════════> TENANTS                    │
                         │ FK  customer_id ═══════> CUSTOMERS                  │
                         │ FK  booked_by_user_id ═> USERS (agent who booked)  │
                         │     pnr (supplier reference)                        │
@@ -187,9 +161,9 @@
 ├───────────────────────┤ │   (Junction Table)   │ ├──────────────────────┤
 │ PK flight_booking_id │ ├──────────────────────┤ │ PK payment_id       │
 │ FK booking_id ═══════>│ │ PK booking_traveler_id│ │ FK booking_id ══════>│
-│    airline_code      │ │ FK booking_id ════════>│ │ FK tenant_id        │
-│    airline_name      │ │ FK traveler_id ═════> │ │    payment_reference│
-│    flight_number     │ │    traveler_type     │ │    transaction_id   │
+│    airline_code      │ │ FK booking_id ════════>│ │    payment_reference│
+│    airline_name      │ │ FK traveler_id ═════> │ │    transaction_id   │
+│    flight_number     │ │    traveler_type     │ │    amount           │
 │    origin_airport    │ │    ticket_number     │ │    amount           │
 │    destination_airport│ │    seat_number       │ │    payment_method   │
 │    departure_datetime│ │    meal_preference   │ │    payment_gateway  │
@@ -234,7 +208,6 @@
 ├─────────────────────────────────────────────────────────────┤
 │ PK  commission_id                                          │
 │     commission_uuid                                        │
-│ FK  tenant_id ═════════> TENANTS                           │
 │ FK  booking_id ════════> BOOKINGS                          │
 │ FK  user_id ═══════════> USERS (specific agent)            │
 │     booking_type: 'FLIGHT'                                 │
@@ -258,7 +231,7 @@
 │                  COMMISSION_RULES                           │
 ├─────────────────────────────────────────────────────────────┤
 │ PK  rule_id                                                │
-│ FK  tenant_id (NULL for global rules)                      │
+│ FK  user_id (NULL for global rules)                        │
 │     rule_name                                              │
 │     rule_type: 'PERCENTAGE', 'FLAT', 'TIERED'              │
 │     booking_type, cabin_class, airline_code                │
@@ -276,7 +249,6 @@
 ├─────────────────────────────────────────────────────────────┤
 │ PK  invoice_id                                             │
 │     invoice_uuid                                           │
-│ FK  tenant_id ═════════> TENANTS                           │
 │ FK  booking_id ════════> BOOKINGS                          │
 │ FK  customer_id ═══════> CUSTOMERS                         │
 │     invoice_number (UNIQUE) "INV-2025-00001"               │
@@ -399,7 +371,6 @@
 │ PK  session_id (VARCHAR - UUID)                            │
 │ FK  user_id ═══════════> USERS (for agents/staff)          │
 │ FK  customer_id ═══════> CUSTOMERS (for end customers)     │
-│ FK  tenant_id                                              │
 │     session_token (hashed JWT)                             │
 │     refresh_token                                          │
 │     device_type: 'DESKTOP', 'MOBILE', 'TABLET'             │
@@ -415,7 +386,7 @@
 │                      sec.API_KEYS                           │
 ├─────────────────────────────────────────────────────────────┤
 │ PK  api_key_id                                             │
-│ FK  tenant_id ═════════> TENANTS                           │
+│ FK  user_id ═══════════> USERS                             │
 │     key_name                                               │
 │     api_key (hashed)                                       │
 │     api_secret (hashed)                                    │
@@ -439,7 +410,6 @@
 │                  audit.ACTIVITY_LOGS                        │
 ├─────────────────────────────────────────────────────────────┤
 │ PK  activity_log_id                                        │
-│ FK  tenant_id                                              │
 │     actor_type: 'USER', 'CUSTOMER', 'SYSTEM', 'API'        │
 │     actor_id (user_id or customer_id)                      │
 │     actor_email                                            │
@@ -488,7 +458,6 @@
 ├─────────────────────────────────────────────────────────────┤
 │ PK  summary_id                                             │
 │     summary_date (DATE)                                    │
-│ FK  tenant_id                                              │
 │     booking_type: 'FLIGHT'                                 │
 │     origin_code, destination_code                          │
 │     total_bookings, confirmed_bookings                     │
@@ -509,7 +478,6 @@
 │ PK  performance_id                                         │
 │     period_type: 'DAILY', 'WEEKLY', 'MONTHLY'              │
 │     period_start_date, period_end_date                     │
-│ FK  tenant_id ═════════> TENANTS                           │
 │ FK  user_id ═══════════> USERS                             │
 │     total_bookings, successful_bookings                    │
 │     cancelled_bookings                                     │
@@ -527,8 +495,8 @@
 │       analytics.MV_AGENT_PERFORMANCE_DAILY                  │
 │       (Materialized View - Refreshed Nightly)               │
 ├─────────────────────────────────────────────────────────────┤
-│ PK  (tenant_id, user_id, performance_date)                 │
-│ FK  tenant_id, user_id                                     │
+│ PK  (user_id, performance_date)                            │
+│ FK  user_id                                                │
 │     performance_date                                       │
 │     bookings_count, revenue_generated                      │
 │     commission_earned, customers_acquired                  │
@@ -543,18 +511,18 @@
 ```text
 ═══════════════════════════════════════════════════════════════════════════════
 
-┌────────────────────────┐              ┌────────────────────────┐
-│  SYSTEM_SETTINGS       │              │ TENANT_SETTINGS        │
-│  (Global Config)       │              │ (Tenant-specific)      │
-├────────────────────────┤              ├────────────────────────┤
-│ PK  setting_id        │              │ PK  setting_id        │
-│     setting_key       │              │ FK  tenant_id ════════>│
-│     setting_value     │              │     setting_key       │
-│     setting_type      │              │     setting_value     │
-│     category          │              │     setting_type      │
-│     is_encrypted      │              │     description       │
-│     is_public         │              │     updated_at        │
-└────────────────────────┘              └────────────────────────┘
+┌────────────────────────┐
+│  SYSTEM_SETTINGS       │
+│  (Global Config)       │
+├────────────────────────┤
+│ PK  setting_id        │
+│     setting_key       │
+│     setting_value     │
+│     setting_type      │
+│     category          │
+│     is_encrypted      │
+│     is_public         │
+└────────────────────────┘
 
 ═══════════════════════════════════════════════════════════════════════════════
 ```
@@ -564,19 +532,18 @@
 ```text
 ═══════════════════════════════════════════════════════════════════════════════
 
-                                TENANTS (Root)
+                                USERS (Admin/Agent)
                                     │
                     ┌───────────────┼───────────────┐
                     │               │               │
                     ▼               ▼               ▼
-                  USERS      TENANT_SETTINGS   CUSTOMERS
-                    │                               │
-              ┌─────┼─────┐                    ┌────┼────┐
-              ▼     ▼     ▼                    ▼         ▼
-          ROLES  SESSIONS  API_KEYS      TRAVELERS  BOOKINGS
-              │                                         │
-              ▼                                         │
-        PERMISSIONS                           ┌─────────┼─────────┐
+                 WALLETS         SESSIONS       CUSTOMERS
+                    │               │               │
+              ┌─────┼─────┐         ▼          ┌────┼────┐
+              ▼           ▼      API_KEYS      ▼         ▼
+        TRANSACTIONS   PAYOUTS               TRAVELERS  BOOKINGS
+                                                        │
+                                              ┌─────────┼─────────┐
                                               ▼         ▼         ▼
                                       FLIGHT_   BOOKING_   PAYMENTS
                                       BOOKINGS  TRAVELERS      │
@@ -599,23 +566,22 @@
 ```text
 ═══════════════════════════════════════════════════════════════════════════════
 
-1. TENANTS (Agents/Organizations) - Root entity
-   └─> Has many USERS (Agents, Staff)
+1. USERS (Admin/Agents) - Root entity
+   └─> Has one WALLET
+   └─> Has many WALLET_TRANSACTIONS and PAYOUTS
    └─> Has many CUSTOMERS (registered through them)
    └─> Has many BOOKINGS
-   └─> Has TENANT_SETTINGS
    └─> Has API_KEYS
 
 2. CUSTOMERS
-   └─> Belong to TENANT
+   └─> Belong to USER
    └─> Have many TRAVELERS (saved passenger profiles)
    └─> Have many BOOKINGS
    └─> Receive NOTIFICATIONS
 
 3. BOOKINGS (Central entity)
-   └─> Belongs to TENANT
    └─> Belongs to CUSTOMER
-   └─> Created by USER (agent)
+   └─> Created by USER (Agent)
    └─> Has one FLIGHT_BOOKING (for flight type)
    └─> Has many BOOKING_TRAVELERS (N:M with TRAVELERS)
    └─> Has many PAYMENTS
@@ -636,7 +602,7 @@
 
 6. COMMISSIONS
    └─> Generated from BOOKINGS
-   └─> Assigned to TENANT and USER
+   └─> Assigned to USER
    └─> Follows COMMISSION_RULES
 
 7. AUDIT & SECURITY
@@ -659,7 +625,7 @@
 ═══════════════════════════════════════════════════════════════════════════════
 
 dbo (default schema)
-├── Core business tables (tenants, users, customers, bookings, etc.)
+├── Core business tables (users, wallets, customers, bookings, etc.)
 ├── Master data (airlines, airports)
 └── Configuration (settings, commission_rules)
 
@@ -692,7 +658,7 @@ HIGH-PRIORITY INDEXES:
 bookings:
   - Clustered: booking_id
   - Unique: booking_uuid, booking_reference
-  - Non-Clustered: (tenant_id, booking_status, booking_date)
+  - Non-Clustered: (booked_by_user_id, booking_status, booking_date)
   - Non-Clustered: (customer_id, booking_date)
   - Non-Clustered: (pnr)
   - Columnstore: For analytics queries
@@ -700,7 +666,7 @@ bookings:
 customers:
   - Clustered: customer_id
   - Unique: email, phone, customer_uuid
-  - Non-Clustered: (tenant_id, status)
+  - Non-Clustered: (referred_by_user_id, status)
 
 payments:
   - Clustered: payment_id
@@ -715,7 +681,7 @@ flight_bookings:
 
 commissions:
   - Clustered: commission_id
-  - Non-Clustered: (tenant_id, commission_status, created_at)
+  - Non-Clustered: (user_id, commission_status, created_at)
   - Non-Clustered: (settlement_date)
 
 flight_search_cache:
@@ -793,13 +759,11 @@ airports, airlines:
 ```text
 ═══════════════════════════════════════════════════════════════════════════════
 
-Core Schema (dbo): 23 tables
-├── tenants
+Core Schema (dbo): 21 tables
 ├── users
-├── roles
-├── permissions
-├── user_roles
-├── role_permissions
+├── wallets
+├── wallet_transactions
+├── payouts
 ├── customers
 ├── travelers
 ├── bookings
@@ -817,7 +781,6 @@ Core Schema (dbo): 23 tables
 ├── notifications
 ├── email_logs
 ├── sms_logs
-├── tenant_settings
 └── system_settings
 
 Security Schema (sec): 2 tables
