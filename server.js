@@ -11,7 +11,7 @@ const setupSecurity = require('./src/config/security');
 const setupApp = require('./src/config/app');
 const database = require('./src/database/connection');
 const logger = require('./src/utils/logger');
-const { globalErrorHandler, notFound } = require('./src/middlewares/errorHandler');
+const { globalErrorHandler, notFound } = require('./src/middlewares/errorhandler');
 
 // Create Express app
 const app = express();
@@ -21,7 +21,7 @@ const app = express();
 // ============================================================================
 
 // Security Middleware
-const { loginLimiter, passwordResetLimiter } = setupSecurity(app);
+const securityLimiters = setupSecurity(app); 
 
 // Cookie Parser
 app.use(cookieParser());
@@ -96,4 +96,4 @@ async function startServer() {
 // Start the server
 startServer();
 
-module.exports = app;
+module.exports = { app, securityLimiters };

@@ -22,7 +22,6 @@ router.post(
 
 router.post(
   '/login',
-  loginLimiter,
   validators.email,
   handleValidationErrors,
   authController.login

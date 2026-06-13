@@ -7,7 +7,7 @@
 const sql = require('mssql');
 const database = require('../database/connection');
 const logger = require('../utils/logger');
-const User = require('../models/User');
+const User = require('../models/Users');
 
 class UserRepository {
   /**

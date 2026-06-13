@@ -19,7 +19,7 @@ router.get('/bookings', bookingController.getAllBookings);
 
 // Commission Rules
 router.post('/commission-rules',
-  commissionValidators.createRule,
+  ...commissionValidators.createRule,
   commissionController.createRule
 );
 
@@ -27,7 +27,7 @@ router.post('/commission-rules',
 router.get('/payouts/pending', commissionController.getPendingPayouts);
 
 router.post('/payouts/:payoutId/process',
-  commissionValidators.approvePayout,
+  ...commissionValidators.approvePayout,
   commissionController.processPayout
 );
 

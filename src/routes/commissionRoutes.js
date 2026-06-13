@@ -27,7 +27,7 @@ router.get('/history',
 
 router.post('/payout/request',
   isAgent,
-  commissionValidators.requestPayout,
+  ...commissionValidators.requestPayout,
   commissionController.requestPayout
 );
 
