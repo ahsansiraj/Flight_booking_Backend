@@ -65,7 +65,7 @@ This document is intended to be used for:
 
 ## 3.1 Backend
 
-* Node.js (v18+)
+* Node.js (v24.16.0)
 * Express.js (v5.x)
 * mssql (v12.x)
 * JSON Web Tokens (JWT)
